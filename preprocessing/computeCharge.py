@@ -17,7 +17,7 @@ This file is part of MaSIF.
 Released under an Apache License 2.0
 """
 
-from chemistry_helper import (
+from .chemistry_helper import (
     polarHydrogens,
     radii,
     acceptorAngleAtom,
@@ -32,9 +32,9 @@ from chemistry_helper import (
 # The name of each vertex in the format, example: B_125_x_ASN_ND2_Green
 # where B is chain, 125 res id, x the insertion, ASN aatype, ND2 the name of the
 # atom, and green is not used anymore.
-def computeCharges(pdb_filename, vertices, names):
+def generate_charge(pdb_filename, vertices, names):
     parser = PDBParser(QUIET=True)
-    struct = parser.get_structure(pdb_filename, pdb_filename + ".pdb")
+    struct = parser.get_structure(pdb_filename, pdb_filename)
     residues = {}
     for res in struct.get_residues():
         chain_id = res.get_parent().get_id()
@@ -63,6 +63,7 @@ def computeCharges(pdb_filename, vertices, names):
         if atom_name == "O" and res_id in satisfied_CO:
             continue
         # Compute the charge of the vertex
+
         charge[ix] = computeChargeHelper(
             atom_name, residues[(chain_id, res_id)], vertices[ix]
         )
