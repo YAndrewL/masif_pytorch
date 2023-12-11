@@ -125,6 +125,7 @@ def find_modified_amino_acids(path):
         if res in PROTEIN_LETTERS:
             res_set.remove(res)
     return res_set
+
 # Exclude disordered atoms.
 class NotDisordered(biopdb.Select):
     def accept_atom(self, atom):
@@ -161,6 +162,8 @@ def extractPDB(
                 het = residue.get_id()
                 if het[0] == " ":
                     outputStruct[0][chain.get_id()].add(residue)
+                elif het[0] == "W":  # exclude water
+                    continue
                 elif het[0][-3:] in modified_amino_acids:
                     outputStruct[0][chain.get_id()].add(residue)
 
@@ -170,7 +173,7 @@ def extractPDB(
     pdbio.save(outfilename, select=NotDisordered())
 
 
-def generate_surface(args, infilename, outfilename, cache=False):
+def generate_surface(args, infilename, outfilename, cache=True):
     # pymol to generate xyzr, and MSMS to generate vertex files
     generate_xyzr(infilename, outfilename)
     file_base = ''.join(infilename.split('.')[:-1])

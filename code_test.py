@@ -5,3 +5,4 @@ args = parser.parse_args()
 
 prepare = DataPrepare(args, ['1A0G_A_B'])
 prepare()
+

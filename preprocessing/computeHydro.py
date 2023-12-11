@@ -12,6 +12,7 @@ import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
+
 def generate_hydrophabicity(infilename, names):
     # split PDB file
     #hydro = np.zeros(len(names))  # just a length, no matter who is passed

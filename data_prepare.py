@@ -9,6 +9,11 @@ import os
 from preprocessing.computeSurface import protonate, extractPDB, generate_surface 
 from preprocessing.computeCharge import generate_charge
 from preprocessing.computeHydro import generate_hydrophabicity
+from preprocessing.computeAPBS import generate_apbs
+from preprocessing.utils import GeoMesh
+
+from model_cache.computePolar import generate_polar_coords
+
 from typing import List
 from tqdm import tqdm
 import time
@@ -48,6 +53,13 @@ class DataPrepare(object):
     def run_hydro(self, args, data, names, num):
         input_file = os.path.join(args.processed_path, data, f'p{num}.pdb')
         return generate_hydrophabicity(input_file, names)
+
+    def run_apbs(self, args, data, vertex, num):
+        input_file = os.path.join(args.processed_path, data, f'p{num}.pdb')
+        return generate_apbs(args, input_file, vertex)
+
+    def run_shapeindex(self):
+        pass
 
 
     def __call__(self):
@@ -96,5 +108,17 @@ class DataPrepare(object):
                 # print(len(logp) == len(vertices))
                 # print(len(charge) == len(vertices))
 
-                # 3. generate APBS feature
+                # 3. generate APBS feature, chemical features ended here
+                apbs = self.run_apbs(args,data, vertices, num)
+                print(f'running time for computing APBS charge of component{num}: {time.time() - start_time}')
+
+                # initial a mesh, add 3 features above
+                mesh = GeoMesh(vertices=vertices, faces=faces)
+                mesh.set_attribute('charge', charge)
+                mesh.set_attribute('logp', logp)
+                mesh.set_attribute('apbs', apbs)
+
+                # Polar coords 
+                xxxxx = generate_polar_coords()
                 
+

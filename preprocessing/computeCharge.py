@@ -40,11 +40,15 @@ def generate_charge(pdb_filename, vertices, names):
         chain_id = res.get_parent().get_id()
         if chain_id == "":
             chain_id = " "
-        residues[(chain_id, res.get_id())] = res
+        # hack 
+        # lyf not quite sure eveytime works here
+        res_id = res.get_id()
+        if res_id[0] != ' ':
+            res_id = (' ', res_id[1], res_id[2])
+        residues[(chain_id, res_id)] = res
 
     atoms = Selection.unfold_entities(struct, "A")
     satisfied_CO, satisfied_HN = computeSatisfied_CO_HN(atoms)
-
     charge = np.array([0.0] * len(vertices))
     # Go over every vertex
     for ix, name in enumerate(names):
@@ -129,9 +133,13 @@ def computeAnglePenalty(angle_deviation):
 
 
 def isPolarHydrogen(atom_name, res):
-    if atom_name in polarHydrogens[res.get_resname()]:
-        return True
-    else:
+    # bug # lyf # this part cannot regonizie any non-standard thing, please fix this later
+    try:
+        if atom_name in polarHydrogens[res.get_resname()]:
+            return True
+        else:
+            return False
+    except:
         return False
 
 
