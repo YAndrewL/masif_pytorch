@@ -10,7 +10,10 @@ from preprocessing.computeSurface import protonate, extractPDB, generate_surface
 from preprocessing.computeCharge import generate_charge
 from preprocessing.computeHydro import generate_hydrophabicity
 from preprocessing.computeAPBS import generate_apbs
-from preprocessing.utils import GeoMesh
+from preprocessing.computeSI import generate_shapeindex
+from preprocessing.computeDDC import generate_ddc
+
+from preprocessing.geomesh import GeoMesh
 
 from model_cache.computePolar import generate_polar_coords
 
@@ -23,11 +26,14 @@ import time
 # load functions from preprocessing
 
 
-
 class DataPrepare(object):
-    def __init__(self, args, data_list: List):
+    def __init__(self, args, 
+                 data_list: List,
+                 collapse_rate=0.2,  # for mesh optimize collapse
+                 ):
         self.args = args
         self.data_list = data_list
+        self.collapse_rate = collapse_rate
 
     def run_protonate(self, args, data):
         input_file = os.path.join(args.raw_path, data.split('_')[0] + '.pdb')
@@ -58,9 +64,6 @@ class DataPrepare(object):
         input_file = os.path.join(args.processed_path, data, f'p{num}.pdb')
         return generate_apbs(args, input_file, vertex)
 
-    def run_shapeindex(self):
-        pass
-
 
     def __call__(self):
         args = self.args
@@ -72,7 +75,7 @@ class DataPrepare(object):
             os.mkdir(processed_path) 
         
         print("Start processing data...")
-        for data in tqdm(data_list):
+        for data in data_list:
             start_time = time.time()
             # todo consider multi-processing in the future
             # data is like 1A0G_A_B
@@ -107,18 +110,33 @@ class DataPrepare(object):
                 print(f'running time for computing hydrophabicity of component{num}: {time.time() - start_time}')
                 # print(len(logp) == len(vertices))
                 # print(len(charge) == len(vertices))
+                mesh = GeoMesh(vertex_matrix=vertices, face_matrix=faces, charge=charge, logp=logp)
+                face_number = mesh.current_mesh().face_number()
+                mesh.meshing_decimation_quadric_edge_collapse(targetfacenum=int(self.collapse_rate * face_number))
+                mesh.meshing_repair_non_manifold_edges()  # remove edges
+                #mesh.meshing_remove_duplicate_faces()
+                #mesh.meshing.remove_duplicate_vertices()
+                mesh.meshing_remove_unreferenced_vertices() # done fix by this
+                mesh.apply_coord_taubin_smoothing()
 
-                # 3. generate APBS feature, chemical features ended here
-                apbs = self.run_apbs(args,data, vertices, num)
+                mesh.update_feature()
+
+                # 3. generate APBS feature, chemical features ended here # note: use fine-mesh
+                apbs = self.run_apbs(args, data, mesh.current_mesh().vertex_matrix(), num)
                 print(f'running time for computing APBS charge of component{num}: {time.time() - start_time}')
-
-                # initial a mesh, add 3 features above
-                mesh = GeoMesh(vertices=vertices, faces=faces)
-                mesh.set_attribute('charge', charge)
-                mesh.set_attribute('logp', logp)
                 mesh.set_attribute('apbs', apbs)
-
-                # Polar coords 
-                xxxxx = generate_polar_coords()
                 
+                # initial a mesh, add 3 features above
+                # Polar coords 
+                # 4. shape index # todo
+                rho, theta, neighbor_id = generate_polar_coords(mesh)
+                mesh.set_attribute('rho', rho)
+                mesh.set_attribute('theta', theta)
+                mesh.set_attribute('neighbor_id', neighbor_id)
+                print(f"running time for generating polar coords of component {num}: {time.time() - start_time}")
 
+                mesh = generate_shapeindex(mesh)
+                
+                # 5. distance dependent curvature
+                mesh = generate_ddc(mesh)
+                # mesh.save_to_ply(os.path.join(processed_path, data, f'p_{num}.ply'))

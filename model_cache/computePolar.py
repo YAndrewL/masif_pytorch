@@ -33,6 +33,9 @@ def generate_polar_coords(mesh, do_fast=True, radius=12, max_vertices=200):
     faces = mesh.faces
     normals = mesh.vertex_normals
 
+    print('number of v', len(vertices))
+    print('number of f', len(faces))
+
     # Graph 
     G=nx.Graph()
     n = len(mesh.vertices)
@@ -50,6 +53,7 @@ def generate_polar_coords(mesh, do_fast=True, radius=12, max_vertices=200):
     edgew = scipy.linalg.norm(edgew, axis=1)
     wedges = np.stack([rowi, rowj, edgew]).T
 
+    time_tic = time.time()
     G.add_weighted_edges_from(wedges)
     if do_fast:
         dists = nx.all_pairs_dijkstra_path_length(G, cutoff=radius)
@@ -59,6 +63,7 @@ def generate_polar_coords(mesh, do_fast=True, radius=12, max_vertices=200):
     for key_tuple in dists:
         d2[key_tuple[0]] = key_tuple[1]
     D = dict_to_sparse(d2)
+    print("Dijkstra: ", time.time() - time_tic)
 
     # Compute the faces per vertex.
     idx = {}
@@ -73,7 +78,6 @@ def generate_polar_coords(mesh, do_fast=True, radius=12, max_vertices=200):
     # Set diagonal elements to a very small value greater than zero..
     D[i,i] = 1e-8
     # Call MDS for all points.
-    mds_start_t = time.clock()
 
     if do_fast:
         theta = compute_theta_all_fast(D, vertices, faces, normals, idx, radius)
@@ -92,8 +96,6 @@ def generate_polar_coords(mesh, do_fast=True, radius=12, max_vertices=200):
     #    output_patch_coords(subv, subf, subn, i, neigh_i, theta[i], D[i, :])
     
 
-    mds_end_t = time.clock()
-    print('MDS took {:.2f}s'.format((mds_end_t-mds_start_t)))
     
     n = len(d2)
     theta_out = np.zeros((n, max_vertices))
@@ -114,7 +116,7 @@ def generate_polar_coords(mesh, do_fast=True, radius=12, max_vertices=200):
     # have the angles between 0 and 2*pi
     theta_out[theta_out < 0] +=2 * np.pi
 
-    return rho_out, theta_out, neigh_indices, mask_out
+    return rho_out, theta_out, neigh_indices
 
 def compute_thetas(plane, vix, verts, faces, normal, neighbors, idx):
     """
@@ -262,10 +264,13 @@ def extract_patch(mesh, neigh, cv):
 
 #@jit
 def call_mds(mds_obj, pair_dist):
+    pair_dist = np.asarray(pair_dist) 
     return mds_obj.fit_transform(pair_dist)
 
 def compute_theta_all(D, vertices, faces, normals, idx, radius):
-    mymds = MDS(n_components=2, n_init=1, max_iter=50, dissimilarity='precomputed', n_jobs=10)
+    mymds = MDS(n_components=2, 
+                n_init=1, max_iter=50, 
+                dissimilarity='precomputed', n_jobs=10)
     all_theta = []
     for i in range(D.shape[0]):
         if i % 100 == 0:
@@ -293,9 +298,10 @@ def compute_theta_all_fast(D, vertices, faces, normals, idx, radius):
         scaling. Then, for points farther than radius/2, the shortest line to the center is used. 
         This speeds up the method by a factor of about 100.
     """
-    mymds = MDS(n_components=2, n_init=1, eps=0.1, max_iter=50, dissimilarity='precomputed', n_jobs=1)
+    mymds = MDS(n_components=2, n_init=1, 
+                eps=0.1, max_iter=50, 
+                dissimilarity='precomputed', n_jobs=1)
     all_theta = []
-    start_loop = time.clock()
     only_mds = 0.0
     for i in range(D.shape[0]):
         # Get the pairs of geodesic distances.
@@ -307,10 +313,7 @@ def compute_theta_all_fast(D, vertices, faces, normals, idx, radius):
         pair_dist_i = pair_dist_i.todense()
 
         # Plane_i: the 2D plane for all neighbors of i
-        tic = time.clock()
         plane_i = call_mds(mymds, pair_dist_i)
-        toc = time.clock()
-        only_mds += (toc - tic)
     
         # Compute the angles on the plane.
         theta = compute_thetas(plane_i, i, vertices, faces, normals, neigh_i, idx)
@@ -328,7 +331,4 @@ def compute_theta_all_fast(D, vertices, faces, normals, idx, radius):
 
         
         all_theta.append(theta)
-    end_loop = time.clock()
-    print('Only MDS time: {:.2f}s'.format(only_mds))
-    print('Full loop time: {:.2f}s'.format(end_loop-start_loop))
     return all_theta
