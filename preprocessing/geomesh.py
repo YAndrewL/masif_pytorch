@@ -9,6 +9,7 @@
 import pymeshlab
 import numpy as np
 from sklearn.neighbors import KDTree
+from sklearn.preprocessing import MinMaxScaler
 
 class GeoMesh(pymeshlab.MeshSet):
     def __init__(self, **kwargs):
@@ -25,6 +26,7 @@ class GeoMesh(pymeshlab.MeshSet):
         for key in kwargs:  # add features
             if key != 'vertex_matrix' and key != 'face_matrix':
                 self.metadata[key] = kwargs[key]
+        self.feat_norm_flag = False
 
     @property
     def vertices(self):
@@ -93,17 +95,37 @@ class GeoMesh(pymeshlab.MeshSet):
         self.metadata['logp'] = new_logp
 
     def normalize_features(self):
+        # feature order: shapeindex, ddc, charge, logp, apbs
+        # only normalize logp and apbs, others are in -1 and 1
         feature_dict = self.metadata
+        assert 'input_feature' in feature_dict, "Not all feature are processed!"
+        # for logp
+        # todo all in min-max ,need to talk
+        logp = feature_dict['input_feature'][:, :, 3]
+        scaler = MinMaxScaler(feature_range=(-1, 1))
+        logp = scaler.fit_transform(logp)
+
+        # for apbs
+        apbs = feature_dict['input_feature'][:, :, 4]
+        apbs[apbs > 30] = 30
+        apbs[apbs < -30] = -30
+        apbs = scaler.fit_transform(apbs)
+
+        feature_dict['input_feature'][:, :, 3] = logp        
+        feature_dict['input_feature'][:, :, 4] = apbs
+        self.feat_norm_flag = True
 
 
-    def save_to_ply(self, file):
-        
-        # particularly save to ply with numerical without detail check.
-        # properties [x, y, z, nx, ny, nz]
-        # features [charge, logp, apbs_charge, shapeindex, ddc]
-        pass
+    def save_feature(self, file):
+        feature = self.metadata['input_feature']
+        if self.feat_norm_flag:
+            # save features to npy
+            np.save(file, feature)
+        else:
+            raise SyntaxError("Feature not normalized.")
 
-    def save_to_pdb(self, file):
+
+    def save_to_point(self, file):
         # save coordinates to PDB
         pass
 

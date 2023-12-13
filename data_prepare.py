@@ -141,6 +141,13 @@ class DataPrepare(object):
                 # 5. distance dependent curvature
                 mesh = generate_ddc(mesh)
                 print(f"running time for generating DDC of component {num}: {time.time() - start_time}")
+                mesh.normalize_features()
+                mesh.save_feature(os.path.join(args.processed_path, data, f'p{num}_input_feat.npy'))
+                mesh.save_current_mesh(os.path.join(args.processed_path, data, f'p{num}.ply'), binary=False, save_vertex_color=False)
+
+                print(f"saved.")
+
+            # define positive, negatives
 
 
 
