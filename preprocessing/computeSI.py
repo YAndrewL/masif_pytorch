@@ -7,7 +7,6 @@
 '''
 
 import numpy as np
-import pymeshlab
  
 def generate_shapeindex(mesh):
    # Gaussian and Mean 
@@ -28,7 +27,7 @@ def generate_shapeindex(mesh):
     si = np.arctan(si)*(2/np.pi)
     #assert(len(si) == num_v), print(len(si), num_v)
 
-    mesh.set_attribute('shape index', si)
+    mesh.set_attribute('shape_index', si)
 
     return mesh
 

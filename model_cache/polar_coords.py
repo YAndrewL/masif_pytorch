@@ -116,7 +116,7 @@ def generate_polar_coords(mesh, do_fast=True, radius=12, max_vertices=200):
     # have the angles between 0 and 2*pi
     theta_out[theta_out < 0] +=2 * np.pi
 
-    return rho_out, theta_out, neigh_indices
+    return rho_out, theta_out, neigh_indices, mask_out
 
 def compute_thetas(plane, vix, verts, faces, normal, neighbors, idx):
     """

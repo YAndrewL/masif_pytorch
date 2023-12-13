@@ -15,7 +15,7 @@ from preprocessing.computeDDC import generate_ddc
 
 from preprocessing.geomesh import GeoMesh
 
-from model_cache.computePolar import generate_polar_coords
+from model_cache.polar_coords import generate_polar_coords
 
 from typing import List
 from tqdm import tqdm
@@ -29,7 +29,7 @@ import time
 class DataPrepare(object):
     def __init__(self, args, 
                  data_list: List,
-                 collapse_rate=0.2,  # for mesh optimize collapse
+                 collapse_rate=0.1,  # for mesh optimize collapse
                  ):
         self.args = args
         self.data_list = data_list
@@ -129,14 +129,20 @@ class DataPrepare(object):
                 # initial a mesh, add 3 features above
                 # Polar coords 
                 # 4. shape index # todo
-                rho, theta, neighbor_id = generate_polar_coords(mesh)
+                rho, theta, neighbor_id, neighbor_mask = generate_polar_coords(mesh)
                 mesh.set_attribute('rho', rho)
                 mesh.set_attribute('theta', theta)
                 mesh.set_attribute('neighbor_id', neighbor_id)
-                print(f"running time for generating polar coords of component {num}: {time.time() - start_time}")
-
+                mesh.set_attribute('neighbor_mask', neighbor_mask)
+                
                 mesh = generate_shapeindex(mesh)
+                print(f"running time for generating polar coords & shape index of component {num}: {time.time() - start_time}")
                 
                 # 5. distance dependent curvature
                 mesh = generate_ddc(mesh)
-                # mesh.save_to_ply(os.path.join(processed_path, data, f'p_{num}.ply'))
+                print(f"running time for generating DDC of component {num}: {time.time() - start_time}")
+
+
+
+
+            
