@@ -17,7 +17,7 @@ import time
 from scipy.sparse import csr_matrix, coo_matrix
 
 # mainly rho and theta
-def generate_polar_coords(mesh, do_fast=True, radius=12, max_vertices=200):
+def generate_polar_coords(args, mesh, do_fast=True):
     """
     compute_polar_coordinates: compute the polar coordinates for every patch in the mesh. 
     Returns: 
@@ -26,7 +26,8 @@ def generate_polar_coords(mesh, do_fast=True, radius=12, max_vertices=200):
         neigh_indices: indices of members of each patch. 
         mask: the mask for rho and theta
     """
-
+    radius = args.radius
+    max_vertices = args.max_vertex
 
     # Vertices, faces and normals
     vertices = mesh.vertices

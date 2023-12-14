@@ -12,27 +12,42 @@ from preprocessing.computeHydro import generate_hydrophabicity
 from preprocessing.computeAPBS import generate_apbs
 from preprocessing.computeSI import generate_shapeindex
 from preprocessing.computeDDC import generate_ddc
+from preprocessing.computeSC import generate_shape_complementarity
+
+from preprocessing.cacheCoord import generate_polar_coords
+from preprocessing.cacheSample import generate_data_cache
 
 from preprocessing.geomesh import GeoMesh
-
-from model_cache.polar_coords import generate_polar_coords
 
 from typing import List
 from tqdm import tqdm
 import time
+import random
+from loguru import logger
+
+# dataset using pytorch
+from torch.utils.data import Dataset
+
+
 # for data preprocessing
 # PDB -> precompute features and shortest path
-# todo surface use pymol; shortest path use 
+# done surface use pymol; shortest path use 
 # load functions from preprocessing
+
+# todo cache data for model use
+
 
 
 class DataPrepare(object):
     def __init__(self, args, 
-                 data_list: List,
+                 training_list: List,
+                 testing_list: List,
                  collapse_rate=0.1,  # for mesh optimize collapse
                  ):
         self.args = args
-        self.data_list = data_list
+        self.training_list = training_list
+        self.testing_list = testing_list
+        self.data_list = training_list + testing_list
         self.collapse_rate = collapse_rate
 
     def run_protonate(self, args, data):
@@ -64,12 +79,13 @@ class DataPrepare(object):
         input_file = os.path.join(args.processed_path, data, f'p{num}.pdb')
         return generate_apbs(args, input_file, vertex)
 
+    def download_pdb(self):
+        pass
 
-    def __call__(self):
+    def preprocess(self):
         args = self.args
         data_list = self.data_list
             # "main" function in data prepare file for all in one process
-        raw_path = args.raw_path
         processed_path = args.processed_path
         if not os.path.exists(processed_path):
             os.mkdir(processed_path) 
@@ -83,31 +99,34 @@ class DataPrepare(object):
             if not os.path.exists(os.path.join(processed_path, data)):
                 os.mkdir(os.path.join(processed_path, data))
 
+            logger.add(os.path.join(processed_path, data, 'preprocess.log'))
+            # todo remember to close this
             # Stage I. generate surface 
             # 1. protonate
             self.run_protonate(args, data)
-            print(f'running time for protonating: {time.time() - start_time}')
+            logger.info(f'protonating take: {time.time() - start_time}')
 
             # 2. extract PDB, all process after then should be executed in processed path
             self.run_extractPDB(args, data, chain1, chain2)
-            print(f'running time for extracting PDB: {time.time() - start_time}')
+            logger.info(f'extracting PDB take: {time.time() - start_time}')
 
             
             # process 2 chains separately from then on
+            meshes = []
             for num in range(2):
                 num += 1
                 # 3. generate surface, including non-standard amino acids
                 vertices, faces, normals, names, areas = self.run_surface(args, data, num)
-                print(f'running time for generating surface of component{num}: {time.time() - start_time}')
+                logger.info(f'generating surface of chain{num} take: {time.time() - start_time}')
 
                 # Stage II. generatue features
                 # 1. generate electrons +/- donor and acceptor
                 charge = self.run_charge(args, data, vertices, names, num)
-                print(f'running time for computing charge of component{num}: {time.time() - start_time}')
+                logger.info(f'computing charge of chain{num} take: {time.time() - start_time}')
 
                 # 2. generate logp
                 logp = self.run_hydro(args, data, names, num)
-                print(f'running time for computing hydrophabicity of component{num}: {time.time() - start_time}')
+                logger.info(f'computing hydrophabicity of chain{num} take: {time.time() - start_time}')
                 # print(len(logp) == len(vertices))
                 # print(len(charge) == len(vertices))
                 mesh = GeoMesh(vertex_matrix=vertices, face_matrix=faces, charge=charge, logp=logp)
@@ -123,32 +142,77 @@ class DataPrepare(object):
 
                 # 3. generate APBS feature, chemical features ended here # note: use fine-mesh
                 apbs = self.run_apbs(args, data, mesh.current_mesh().vertex_matrix(), num)
-                print(f'running time for computing APBS charge of component{num}: {time.time() - start_time}')
+                logger.info(f'computing APBS charge of chain{num} take: {time.time() - start_time}')
                 mesh.set_attribute('apbs', apbs)
                 
                 # initial a mesh, add 3 features above
                 # Polar coords 
                 # 4. shape index # todo
-                rho, theta, neighbor_id, neighbor_mask = generate_polar_coords(mesh)
+                rho, theta, neighbor_id, neighbor_mask = generate_polar_coords(args, mesh)
                 mesh.set_attribute('rho', rho)
                 mesh.set_attribute('theta', theta)
                 mesh.set_attribute('neighbor_id', neighbor_id)
                 mesh.set_attribute('neighbor_mask', neighbor_mask)
                 
                 mesh = generate_shapeindex(mesh)
-                print(f"running time for generating polar coords & shape index of component {num}: {time.time() - start_time}")
+                logger.info(f"generating polar coords & shape index of chain{num} take: {time.time() - start_time}")
                 
-                # 5. distance dependent curvature
-                mesh = generate_ddc(mesh)
-                print(f"running time for generating DDC of component {num}: {time.time() - start_time}")
+                # 5. distance dependent curvature 
+                mesh = generate_ddc(args, mesh)
+                logger.info(f"generating DDC of chain{num} take: {time.time() - start_time}")
+
                 mesh.normalize_features()
-                mesh.save_feature(os.path.join(args.processed_path, data, f'p{num}_input_feat.npy'))
-                mesh.save_current_mesh(os.path.join(args.processed_path, data, f'p{num}.ply'), binary=False, save_vertex_color=False)
+                #mesh.save_feature(os.path.join(args.processed_path, data, f'p{num}_input_feat.npy'))
+                #mesh.save_current_mesh(os.path.join(args.processed_path, data, f'p{num}.ply'), binary=False, save_vertex_color=False)
+                logger.info(f"Feature and polygon files saved for component{num}.")
+                assert mesh.feat_norm_flag == True
+                meshes.append(mesh)
 
-                print(f"saved.")
-
+            # ignore previous mesh
             # define positive, negatives
+            mesh1, mesh2 = generate_shape_complementarity(args, meshes)  
+            mesh1.save_feature(os.path.join(args.processed_path, data, f'p1_input_feat.npy'))
+            mesh2.save_feature(os.path.join(args.processed_path, data, f'p2_input_feat.npy'))
+            mesh1.save_current_mesh(os.path.join(args.processed_path, data, f'p1.ply'), binary=False, save_vertex_color=False)
+            mesh2.save_current_mesh(os.path.join(args.processed_path, data, f'p2.ply'), binary=False, save_vertex_color=False)
+        logger.info("Feature preprocessing finished, move to model file cache.")
+        logger.remove()
+        return True
 
+    def cache(self):
+        args = self.args
+        train_path = os.path.join(args.dataset_path, 'train')
+        val_path = os.path.join(args.dataset_path, 'val')
+        test_path = os.path.join(args.dataset_path, 'test')
+        
+        if not os.path.exists(train_path):
+            os.mkdir(train_path)
+        if not os.path.exists(val_path):
+            os.mkdir(val_path)
+        if not os.path.exists(test_path):
+            os.mkdir(test_path)
+
+        random.seed(args.random_seed)
+        # leave 10% as val
+        training_list = self.training_list
+        random.shuffle(training_list)
+        train_num = int(len(training_list) * 0.9)
+        
+        trainset = train_num[:train_num]
+        valset = training_list[train_num:]
+        testset = self.testing_list
+
+        start_time = time.time()
+        logger.add(f"{args.dataset_path}.log")
+        for dataset, datapath in zip([trainset, valset, testset], [train_path, val_path, test_path]):
+            generate_data_cache(args, os.path.join(datapath), dataset)
+            logger.info(f"data caching finished in {datapath}, take {time.time() - start_time}")
+        logger.remove()
+        
+        
+        
+class SurfaceDataset(Dataset):
+    pass
 
 
 

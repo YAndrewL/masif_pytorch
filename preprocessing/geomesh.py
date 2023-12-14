@@ -12,21 +12,23 @@ from sklearn.neighbors import KDTree
 from sklearn.preprocessing import MinMaxScaler
 
 class GeoMesh(pymeshlab.MeshSet):
-    def __init__(self, **kwargs):
+    def __init__(self, load=False, **kwargs):
         super().__init__()
-        # define sth. into meta data 
-        if not 'vertex_matrix' in kwargs or not 'face_matrix' in kwargs:
-            raise KeyError("not find essential keys vertex/face")
 
-        
-        self.original_mesh = pymeshlab.Mesh(vertex_matrix=kwargs['vertex_matrix'], face_matrix=kwargs['face_matrix'] )
-        self.add_mesh(self.original_mesh)
+        if not load:
+            # define sth. into meta data 
+            if not 'vertex_matrix' in kwargs or not 'face_matrix' in kwargs:
+                raise KeyError("not find essential keys vertex/face")
 
-        self.metadata = {}
-        for key in kwargs:  # add features
-            if key != 'vertex_matrix' and key != 'face_matrix':
-                self.metadata[key] = kwargs[key]
-        self.feat_norm_flag = False
+            
+            self.original_mesh = pymeshlab.Mesh(vertex_matrix=kwargs['vertex_matrix'], face_matrix=kwargs['face_matrix'] )
+            self.add_mesh(self.original_mesh)
+
+            self.metadata = {}
+            for key in kwargs:  # add features
+                if key != 'vertex_matrix' and key != 'face_matrix':
+                    self.metadata[key] = kwargs[key]
+            self.feat_norm_flag = False
 
     @property
     def vertices(self):
@@ -115,18 +117,22 @@ class GeoMesh(pymeshlab.MeshSet):
         feature_dict['input_feature'][:, :, 4] = apbs
         self.feat_norm_flag = True
 
-
     def save_feature(self, file):
-        feature = self.metadata['input_feature']
+        # todo here change to save dict
+        # feature = self.metadata['input_feature']
         if self.feat_norm_flag:
             # save features to npy
-            np.save(file, feature)
+            np.save(file, self.metadata)
         else:
             raise SyntaxError("Feature not normalized.")
 
+    def load_feature(self, file):
+        feat = np.load(file, allow_pickle=True).item()
+        assert type(feat) == dict
+        self.metadata = feat
 
     def save_to_point(self, file):
-        # save coordinates to PDB
+        # save coordinates to point cloud
         pass
 
 

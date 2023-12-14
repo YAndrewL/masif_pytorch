@@ -7,11 +7,11 @@
 Credit to PGC MaSIF
 '''
 
-
 import numpy as np
 
-def generate_ddc(mesh, max_shape=200):
+def generate_ddc(args, mesh):
 
+    max_shape = args.max_vertex
     n = len(mesh.vertices)
     neigh_indices = mesh.get_attribute('neighbor_id')
     rho = mesh.get_attribute('rho')
