@@ -7,5 +7,17 @@
 '''
 
 class Trainer(object):
-    pass
+    """A trainer class, for training and testing
+    """
+    def __init__(self, 
+                 model,
+                 optimizer,
+                 ):
+        self.optimizer = optimizer
+        self.model=model
 
+    def train(self,dataset):
+        pass
+
+    def inference(self, data_path):
+        pass

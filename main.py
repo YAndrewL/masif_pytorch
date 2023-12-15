@@ -9,3 +9,6 @@ from arguments import parser
 # add required software file path here
 # load softwares here
 
+# dataprepare
+if aaa:
+    exit(1)

@@ -3,9 +3,14 @@
 @File   :  data_prepare.py
 @Time   :  2023/12/06 21:12
 @Author :  Yufan Liu
-@Desc   :  Generate features and path
+@Desc   :  Generate features and path, features and Dataset class for training
 '''
 import os
+from os.path import join as pjoin
+import time
+import random
+from loguru import logger
+
 from preprocessing.computeSurface import protonate, extractPDB, generate_surface 
 from preprocessing.computeCharge import generate_charge
 from preprocessing.computeHydro import generate_hydrophabicity
@@ -19,14 +24,10 @@ from preprocessing.cacheSample import generate_data_cache
 
 from preprocessing.geomesh import GeoMesh
 
-from typing import List
-from tqdm import tqdm
-import time
-import random
-from loguru import logger
+from dataset.dataset import SurfaceDataset, collate_fn
+from torch.utils.data import DataLoader
 
 # dataset using pytorch
-from torch.utils.data import Dataset
 
 
 # for data preprocessing
@@ -40,43 +41,48 @@ from torch.utils.data import Dataset
 
 class DataPrepare(object):
     def __init__(self, args, 
-                 training_list: List,
-                 testing_list: List,
+                 training_list=[],
+                 testing_list=[],
+                 data_list=None,
                  collapse_rate=0.1,  # for mesh optimize collapse
                  ):
         self.args = args
         self.training_list = training_list
         self.testing_list = testing_list
         self.data_list = training_list + testing_list
+
+        if data_list:
+            self.data_list = data_list
+
         self.collapse_rate = collapse_rate
 
     def run_protonate(self, args, data):
-        input_file = os.path.join(args.raw_path, data.split('_')[0] + '.pdb')
-        output_file = os.path.join(args.processed_path, data, 'raw.pdb') 
+        input_file = pjoin(args.raw_path, data.split('_')[0] + '.pdb')
+        output_file = pjoin(args.processed_path, data, 'raw.pdb') 
         protonate(args, input_file, output_file)
 
     def run_extractPDB(self, args, data, chain1, chain2):
-        input_file = os.path.join(args.processed_path, data, 'raw.pdb')
-        out_chain1 = os.path.join(args.processed_path, data, 'p1.pdb')
-        out_chain2 = os.path.join(args.processed_path, data, 'p2.pdb')
+        input_file = pjoin(args.processed_path, data, 'raw.pdb')
+        out_chain1 = pjoin(args.processed_path, data, 'p1.pdb')
+        out_chain2 = pjoin(args.processed_path, data, 'p2.pdb')
         extractPDB(input_file, out_chain1, chain1)
         extractPDB(input_file, out_chain2, chain2)
 
     def run_surface(self, args, data, num):
-        input_file = os.path.join(args.processed_path, data, f'p{num}.pdb')
-        output_file = os.path.join(args.processed_path, data, f'p{num}.xyzrn')
+        input_file = pjoin(args.processed_path, data, f'p{num}.pdb')
+        output_file = pjoin(args.processed_path, data, f'p{num}.xyzrn')
         return generate_surface(args, input_file, output_file, cache=False)
 
     def run_charge(self, args, data, vertices, names, num):
-        input_file = os.path.join(args.processed_path, data, f'p{num}.pdb')
+        input_file = pjoin(args.processed_path, data, f'p{num}.pdb')
         return generate_charge(input_file, vertices, names)
 
     def run_hydro(self, args, data, names, num):
-        input_file = os.path.join(args.processed_path, data, f'p{num}.pdb')
+        input_file = pjoin(args.processed_path, data, f'p{num}.pdb')
         return generate_hydrophabicity(input_file, names)
 
     def run_apbs(self, args, data, vertex, num):
-        input_file = os.path.join(args.processed_path, data, f'p{num}.pdb')
+        input_file = pjoin(args.processed_path, data, f'p{num}.pdb')
         return generate_apbs(args, input_file, vertex)
 
     def download_pdb(self):
@@ -96,10 +102,11 @@ class DataPrepare(object):
             # todo consider multi-processing in the future
             # data is like 1A0G_A_B
             pdb, chain1, chain2 = data.split('_')
-            if not os.path.exists(os.path.join(processed_path, data)):
-                os.mkdir(os.path.join(processed_path, data))
+            if not os.path.exists(pjoin(processed_path, data)):
+                os.mkdir(pjoin(processed_path, data))
 
-            logger.add(os.path.join(processed_path, data, 'preprocess.log'))
+            logfile = pjoin(processed_path, data, 'preprocess.log')
+            handler = logger.add(logfile)
             # todo remember to close this
             # Stage I. generate surface 
             # 1. protonate
@@ -162,8 +169,8 @@ class DataPrepare(object):
                 logger.info(f"generating DDC of chain{num} take: {time.time() - start_time}")
 
                 mesh.normalize_features()
-                #mesh.save_feature(os.path.join(args.processed_path, data, f'p{num}_input_feat.npy'))
-                #mesh.save_current_mesh(os.path.join(args.processed_path, data, f'p{num}.ply'), binary=False, save_vertex_color=False)
+                #mesh.save_feature(pjoin(args.processed_path, data, f'p{num}_input_feat.npy'))
+                #mesh.save_current_mesh(pjoin(args.processed_path, data, f'p{num}.ply'), binary=False, save_vertex_color=False)
                 logger.info(f"Feature and polygon files saved for component{num}.")
                 assert mesh.feat_norm_flag == True
                 meshes.append(mesh)
@@ -171,19 +178,19 @@ class DataPrepare(object):
             # ignore previous mesh
             # define positive, negatives
             mesh1, mesh2 = generate_shape_complementarity(args, meshes)  
-            mesh1.save_feature(os.path.join(args.processed_path, data, f'p1_input_feat.npy'))
-            mesh2.save_feature(os.path.join(args.processed_path, data, f'p2_input_feat.npy'))
-            mesh1.save_current_mesh(os.path.join(args.processed_path, data, f'p1.ply'), binary=False, save_vertex_color=False)
-            mesh2.save_current_mesh(os.path.join(args.processed_path, data, f'p2.ply'), binary=False, save_vertex_color=False)
-        logger.info("Feature preprocessing finished, move to model file cache.")
-        logger.remove()
+            mesh1.save_feature(pjoin(args.processed_path, data, f'p1_input_feat.npy'))
+            mesh2.save_feature(pjoin(args.processed_path, data, f'p2_input_feat.npy'))
+            mesh1.save_current_mesh(pjoin(args.processed_path, data, f'p1.ply'), binary=False, save_vertex_color=False)
+            mesh2.save_current_mesh(pjoin(args.processed_path, data, f'p2.ply'), binary=False, save_vertex_color=False)
+            logger.success("feature preprocessing done, mesh saved.")
+            logger.remove(handler)
         return True
 
     def cache(self):
         args = self.args
-        train_path = os.path.join(args.dataset_path, 'train')
-        val_path = os.path.join(args.dataset_path, 'val')
-        test_path = os.path.join(args.dataset_path, 'test')
+        train_path = pjoin(args.dataset_path, 'train')
+        val_path = pjoin(args.dataset_path, 'val')
+        test_path = pjoin(args.dataset_path, 'test')
         
         if not os.path.exists(train_path):
             os.mkdir(train_path)
@@ -196,23 +203,43 @@ class DataPrepare(object):
         # leave 10% as val
         training_list = self.training_list
         random.shuffle(training_list)
-        train_num = int(len(training_list) * 0.9)
+        train_num = int(len(training_list) * 0.5)
         
-        trainset = train_num[:train_num]
+        trainset = training_list[:train_num]
         valset = training_list[train_num:]
         testset = self.testing_list
 
         start_time = time.time()
-        logger.add(f"{args.dataset_path}.log")
         for dataset, datapath in zip([trainset, valset, testset], [train_path, val_path, test_path]):
-            generate_data_cache(args, os.path.join(datapath), dataset)
-            logger.info(f"data caching finished in {datapath}, take {time.time() - start_time}")
-        logger.remove()
-        
-        
-        
-class SurfaceDataset(Dataset):
-    pass
+            generate_data_cache(args, pjoin(datapath), dataset)
+        print(f"Data caching finished, time take: {time.time() - start_time}")
+        return True
+    
+    def dataset(self, data_type:str, 
+                batch_size:int, 
+                pair_shuffle:bool) -> DataLoader:
+        data = SurfaceDataset(args=self.args, 
+                              dataset_type=data_type, 
+                              pair_shuffle=pair_shuffle)
+        if data_type == 'train':
+            shuffle = True
+        else: shuffle = False
+        dset = DataLoader(data, batch_size=batch_size, 
+                          collate_fn=collate_fn(), 
+                          shuffle=shuffle)
+        return dset
+
+
+
+    
+
+
+
+
+
+
+
+
 
 
 

@@ -3,4 +3,11 @@
 /*.ply
 /*.pdb
 code_test.py
+make_data.py
 **/*.log
+**/*.npy
+**/*.ipynb
+**/*.sh
+/exelogs
+/dataset
+

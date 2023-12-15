@@ -16,8 +16,8 @@ def generate_shape_complementarity(args, meshes):
     v2 = mesh2.vertices
     mask1 = mesh1.metadata['neighbor_mask']
     mask2 = mesh2.metadata['neighbor_mask']
-    neigh1 = mesh1.metadata['neighbor_mask']
-    neigh2 = mesh2.metadata['neighbor_mask']
+    neigh1 = mesh1.metadata['neighbor_id']
+    neigh2 = mesh2.metadata['neighbor_id']
     rho1 = mesh1.metadata['rho']
     rho2 = mesh2.metadata['rho']
 
@@ -48,11 +48,11 @@ def generate_shape_complementarity(args, meshes):
         assert (d[cv1_ix] < int_cutoff)
         # First shape complementarity s1->s2 for the entire patch
         patch_idxs1 = np.where(mask1[cv1_ix]==1)[0]
-        neigh_cv1 = np.array(neigh1[cv1_ix])[patch_idxs1]
+        neigh_cv1 = np.array(neigh1[cv1_ix])[patch_idxs1].astype(int)
         # Find the point cv2_ix in s2 that is closest to cv1_ix
         cv2_ix = nearest_neighbors_v1_to_v2[cv1_ix]
         patch_idxs2 = np.where(mask2[cv2_ix]==1)[0]
-        neigh_cv2 = np.array(neigh2[cv2_ix])[patch_idxs2]
+        neigh_cv2 = np.array(neigh2[cv2_ix])[patch_idxs2].astype(int)
 
         patch_v1 = v1[neigh_cv1]
         patch_v2 = v2[neigh_cv2]

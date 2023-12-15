@@ -26,7 +26,7 @@ def generate_polar_coords(args, mesh, do_fast=True):
         neigh_indices: indices of members of each patch. 
         mask: the mask for rho and theta
     """
-    radius = args.radius
+    radius = args.sc_radius
     max_vertices = args.max_vertex
 
     # Vertices, faces and normals
