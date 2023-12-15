@@ -41,7 +41,9 @@ parser.add_argument("--random_seed",
 parser.add_argument("--max_vertex", 
                     type=int, 
                     default=200, 
-                    help="Max vertex neighor for input feature.") 
+                    help="Max vertex neighbor for input feature.") 
+
+
 # for shape complementarity
 parser.add_argument("--sc_w", 
                     type=int, 
@@ -79,3 +81,8 @@ parser.add_argument("--device",
                     type=str,
                     default='cpu',
                     help="device for model")
+parser.add_argument("--max_distance", 
+                    type=float, 
+                    default=12.0, 
+                    help="Max patch radius for searching") 
+

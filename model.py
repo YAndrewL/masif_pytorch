@@ -6,16 +6,120 @@
 @Desc   :  MaSIF model by Pytorch
 '''
 
-# reference
-# MoNet paper:https://arxiv.org/abs/1611.08402
 
 import torch  
 import torch.nn as nn
 import numpy as np
 pi = torch.tensor(3.141592653589793)
 
+class GaussianFiler(nn.Module):
+    """
+    Define a Gaussian filter to conduct per-feature pattern matching
+    """
+    def  __init__(self,
+                  args,
+                  n_thetas,
+                  n_rhos,
+                  n_rotations):
+        super().__init__()
+        self.max_rho = args.max_distance
+        self.n_thetas = n_thetas
+        self.n_rhos  = n_rhos
+        self.n_rotations = n_rotations  
+        # note: from paper: 
+        # take all possible rotations (16 here) and take max as final,
+        # to resolve the origin ambiguity in angular coordinate
+        self.device = args.device
+
+        self.sigma_rho_init = (
+            self.max_rho / 8
+        )  # in MoNet was 0.005 with max radius=0.04 (i.e. 8 times smaller)
+        self.sigma_theta_init = 1.0  # 0.25
+        self.n_rotations = n_rotations
+        self.n_feat = 5
+        
+        initial_coords = self.compute_initial_coordinates() 
+        mu_rho_initial = initial_coords[:, 0].unsqueeze(0)  # [n_rho * n_theta, 1]
+        mu_theta_initial = initial_coords[:, 1].unsqueeze(0)
+        self.mu_rho = []
+        self.mu_theta = []
+        self.sigma_rho = []
+        self.sigma_theta = []
+        # todo I dont know why initilized as this, since the set of parameters are trainable
+        print(mu_rho_initial.shape)
+        for i in range(self.n_feat):
+            self.mu_rho.append(
+                nn.Parameter(mu_rho_initial).to(self.device)
+            )  # 1, n_gauss
+            self.mu_theta.append(
+                nn.Parameter(mu_theta_initial).to(self.device)
+            )  # 1, n_gauss
+            self.sigma_rho.append(
+                nn.Parameter(torch.ones_like(mu_rho_initial) * self.sigma_rho_init).to(self.device)
+            )  # 1, n_gauss
+            self.sigma_theta.append(
+                nn.Parameter(torch.ones_like(mu_theta_initial) * self.sigma_theta_init).to(self.device)
+            )  # 1, n_gauss
+
+        self.global_desc = []
+        # geodisc conv, trainable
+        self.b_conv = []
+        for i in range(self.n_feat):
+            self.b_conv.append(
+                nn.Parameter(torch.FloatTensor(self.n_thetas * self.n_rhos)).double().to(self.device)
+            )
+        # for i in range(self.n_feat):
+        self.W_conv = nn.Parameter(torch.FloatTensor(self.n_thetas * self.n_rhos,
+                                            self.n_thetas * self.n_rhos)).double().to(self.device) # to float 64  # todo  change abit
+        nn.init.xavier_normal_(self.W_conv)
+
+
+
+
+    def compute_initial_coordinate(self):
+        # initialize a polar mesh grid
+        range_rho = torch.linspace(0.0, self.max_rho, steps=self.n_rhos + 1)
+        range_theta = torch.linspace(0, 2 * np.pi, steps=self.n_thetas + 1)
+
+        # rho!=0 and theta!=2pi
+        range_rho = range_rho[1:]
+        range_theta = range_theta[:-1]
+
+        # Creating the mesh grid using torch.meshgrid
+        grid_rho, grid_theta = torch.meshgrid(range_rho, range_theta, indexing='ij')
+        print(grid_rho)
+        # Flattening the grid arrays
+        grid_rho = grid_rho.flatten()
+        grid_theta = grid_theta.flatten()
+
+        # Combining the coordinates
+        coords = torch.stack((grid_rho, grid_theta), dim=1)
+
+        return coords  # [n_rhos * n_thetas, 2]
+
+    def forward(self, feature, rho, theta):
+        pass
+
+
+
+
+
+
+
+
+
+
 
 class MaSIF_ppi_search(nn.Module):
+
+    """
+    LYF Note:
+    Take MoNet as a main reference: https://arxiv.org/abs/1611.08402 (Equation 9)
+    For each dimension of feature, a pseudo-coordinate is defined (Table1), where we used acutal
+    polar coordinate in this model. Further, use weight function (filter) to generate descriptor for 
+    each point (vertex) using coordinates respect to neighbor. Filter is Gaussian as Equation 11.
+    """
+
     def __init__(self,
         args,
         max_rho,
@@ -31,12 +135,7 @@ class MaSIF_ppi_search(nn.Module):
         self.n_thetas = n_thetas
         self.n_rhos = n_rhos
 
-        self.sigma_rho_init = (
-            max_rho / 8
-        )  # in MoNet was 0.005 with max radius=0.04 (i.e. 8 times smaller)
-        self.sigma_theta_init = 1.0  # 0.25
-        self.n_rotations = n_rotations
-        self.n_feat = int(sum(feat_mask))  # for ablation I think
+ # for ablation I think
 
         # initialize polar coords, contruct Gaussian kernel
         initial_coords = self.compute_initial_coordinates()
@@ -160,8 +259,6 @@ class MaSIF_ppi_search(nn.Module):
         eps=1e-5,
         mean_gauss_activation=True,
     ):
-        # compute the vertex descriptors
-        # refer to MoNet paper for the Gaussian part
     
         n_samples = rho_coords.size(0)
         n_vertice = rho_coords.size(1)
@@ -213,33 +310,7 @@ class MaSIF_ppi_search(nn.Module):
         return out
 
 
-    def compute_initial_coordinates(self):
-        # initialize a polar mesh grid
-        range_rho = [0.0, self.max_rho]
-        range_theta = [0, 2 * np.pi]
 
-        grid_rho = np.linspace(range_rho[0], range_rho[1], num=self.n_rhos + 1)
-        grid_rho = grid_rho[1:]
-        grid_theta = np.linspace(range_theta[0], range_theta[1], num=self.n_thetas + 1)
-        grid_theta = grid_theta[:-1]
-
-        grid_rho_, grid_theta_ = np.meshgrid(grid_rho, grid_theta, sparse=False)
-        grid_rho_ = (
-            grid_rho_.T
-        )  # the traspose here is needed to have the same behaviour as Matlab code
-        grid_theta_ = (
-            grid_theta_.T
-        )  # the traspose here is needed to have the same behaviour as Matlab code
-        grid_rho_ = grid_rho_.flatten()
-        grid_theta_ = grid_theta_.flatten()
-
-        coords = np.concatenate((grid_rho_[None, :], grid_theta_[None, :]), axis=0)
-        coords = coords.T  # every row contains the coordinates of a grid intersection
-        # print(coords.shape)
-        # print(coords)
-        coords = torch.from_numpy(coords)
-        coords = coords.to(self.device)
-        return coords
 
 # some functions do not need backbpropagation
     
