@@ -38,6 +38,10 @@ parser.add_argument("--random_seed",
                     type=int, 
                     default=42, 
                     help="seed.") 
+parser.add_argument("--training_split", 
+                    type=float, 
+                    default=0.9
+                    ) 
 parser.add_argument("--max_vertex", 
                     type=int, 
                     default=200, 
@@ -82,11 +86,11 @@ parser.add_argument("--data_list",
                     help="tmp used for data prepare")
 parser.add_argument("--batch_size",
                     type=int,
-                    default=32,
+                    default=64,
                     help="Batch size for training")
 parser.add_argument("--device",
                     type=str,
-                    default='cpu',
+                    default='cuda',
                     help="device for model")
 parser.add_argument("--max_distance", 
                     type=float, 
@@ -101,6 +105,15 @@ parser.add_argument("--epochs",
 parser.add_argument("--test_epochs",
                     type=int,
                     default=100)
+
+parser.add_argument("--pos_thresh",
+                    type=float,
+                    default=0.0,
+                    help="Threshold for positive samples")
+parser.add_argument("--neg_thresh",
+                    type=float,
+                    default=10.0,
+                    help="Threshold for negative samples")
 
 # initialization model
 parser.add_argument("--n_thetas",

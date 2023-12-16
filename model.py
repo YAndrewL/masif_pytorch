@@ -71,7 +71,7 @@ class GaussianFiler(nn.Module):
             wconv.append(nn.Parameter(torch.Tensor(self.n_thetas * self.n_rhos,
                                                 self.n_thetas * self.n_rhos)).to(self.device)
             ) 
-        self.W_conv = [nn.init.xavier_normal(wconv[i]) for i in range(self.n_features)]
+        self.W_conv = [nn.init.xavier_normal_(wconv[i]) for i in range(self.n_features)]
 
 
     def compute_initial_coordinate(self):
@@ -211,9 +211,9 @@ class MaSIFSearch(nn.Module):
         desc = []
         for data in batch:
             data = data.to(self.args.device)
-            feature = data[:, :, :5]
-            rho = data[:, :, 5:6]
-            theta = data[:,:,6:7]
+            feature = data[:, :, :5].clone()
+            rho = data[:, :, 5:6].clone()
+            theta = data[:,:,6:7].clone()
             out = self.gauss_conv(feature=feature, rhos=rho, thetas=theta)
             out = self.relu(out)
             out = self.fcc(out)

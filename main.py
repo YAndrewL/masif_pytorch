@@ -14,10 +14,17 @@ args = parser.parse_args()
 
 # prepare data
 # note: execute prepare.preprocess in advance due to speed issue
-prepare = DataPrepare(args, training_list=['1AKJ_AB_DE', '1A0G_A_B', '3I71_A_B', '3IA0_I_J'], 
-                      testing_list=['1A2A_C_D', '3IDF_A_B'])
+training_list = open("data/list/train_all.txt").readlines()
+training_list = [x.strip() for x in training_list]
+
+testing_list = open("data/list/test_all.txt").readlines()
+testing_list = [x.strip() for x in testing_list]
+
+prepare = DataPrepare(args, 
+                      training_list=training_list, 
+                      testing_list=testing_list)
 # prepare.preprocess()
-#prepare.cache()
+# prepare.cache()
 
 # dataset
 train_set = prepare.dataset(data_type='train',

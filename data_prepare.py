@@ -203,7 +203,7 @@ class DataPrepare(object):
         # leave 10% as val
         training_list = self.training_list
         random.shuffle(training_list)
-        train_num = int(len(training_list) * 0.5)
+        train_num = int(len(training_list) * self.args.training_split)
         
         trainset = training_list[:train_num]
         valset = training_list[train_num:]

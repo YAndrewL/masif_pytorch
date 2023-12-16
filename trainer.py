@@ -13,6 +13,7 @@ import datetime
 import os
 import numpy as np
 from sklearn.metrics import roc_auc_score
+from tqdm import tqdm
 
 
 class Trainer(object):
@@ -40,12 +41,13 @@ class Trainer(object):
         self.relu = nn.ReLU()
 
     def train(self):
-        torch.autograd.set_detect_anomaly(True)
+        #torch.autograd.set_detect_anomaly(True)
         logger.info("Training start!")
+        best_val_auc = -1
         for epoch in range(self.epochs):
             self.model.train()
             train_score = []
-            for data in self.train_set:
+            for data in tqdm(self.train_set):
                 outputs = self.model(data)
                 loss, score = self.compute_loss(outputs)
 
@@ -54,15 +56,14 @@ class Trainer(object):
                 self.optimizer.step()
                 train_score.append(score)  # todo why score is computed as 1/dist
 
-
+            logger.info(f"Epoch {epoch} / {self.epochs}, Training loss: {loss.item():.6f}")
             if epoch % self.args.test_epochs == 0:
-                logger.success(f"Epoch: {epoch}/{self.epochs}")
-                logger.info(f"Training loss: {loss.item():.6f}")
+                logger.warning(f"Iteration reached, validate and test!")
                 
                 # validtion
                 loss = []
                 score = []
-                for data in self.val_set:
+                for data in tqdm(self.val_set):
                     self.model.eval()
                     outputs = self.model(data)
                     loss_, score_ = self.compute_loss(outputs)
@@ -76,9 +77,14 @@ class Trainer(object):
                 logger.info(f"Validating loss: {loss.item():.6f}")
                 logger.info(f"Validating AUR-ROC: {roc.item():.6f}")
 
+                if roc.item() > best_val_auc:
+                    torch.save(self.model.state_dict(),
+                               self.savefile)
+                    logger.critical("Better AUC, model saved.")
+
                 loss = []
                 score = []
-                for data in self.test_set:
+                for data in tqdm(self.test_set):
                     self.model.eval()
                     outputs = self.model(data)
                     loss_, score_ = self.compute_loss(outputs)
@@ -88,11 +94,12 @@ class Trainer(object):
                 # score: [(pos:, neg), ...]
                 pos = torch.cat([d[0] for d in score])  # [N-sample,]
                 neg = torch.cat([d[1] for d in score])
+
                 roc = 1 - self.compute_roc_auc(pos, neg)
                 logger.info(f"testing loss: {loss.item():.6f}")
                 logger.info(f"testing AUR-ROC: {roc.item():.6f}")
 
-    def compute_roc_auc(pos, neg):
+    def compute_roc_auc(self, pos, neg):
         pos = pos.detach().cpu().numpy()
         neg = neg.detach().cpu().numpy()
         labels = np.concatenate([np.ones((len(pos))), np.zeros((len(neg)))])
@@ -102,13 +109,14 @@ class Trainer(object):
     def compute_loss(self, outputs):
         # descriptos
         binder, pos, neg = outputs
-        pos_distance = self.relu(self.dist(binder, pos))
-        neg_distance = self.relu(self.dist(neg, binder))
+        pos_distance = self.relu(self.dist(binder, pos) - self.args.pos_thresh)
+        neg_distance = self.relu(-self.dist(neg, binder) + self.args.neg_thresh)
 
         score = (pos_distance, neg_distance)
-        pos_mean, pos_std = torch.mean(pos_distance, 0), torch.std(pos_distance, 0)
-        neg_mean, neg_std = torch.mean(neg_distance, 0), torch.std(neg_distance, 0)
+        pos_mean, pos_std = torch.mean(pos_distance, 0), torch.var(pos_distance, 0)
+        neg_mean, neg_std = torch.mean(neg_distance, 0), torch.var(neg_distance, 0)
         loss = pos_mean + pos_std + neg_mean + neg_std
+
         return loss, score
 
     def dist(self, a, b):

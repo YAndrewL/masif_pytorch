@@ -10,4 +10,5 @@ make_data.py
 **/*.sh
 /exelogs
 /dataset
-
+/traintmp
+/model
