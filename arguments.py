@@ -71,11 +71,18 @@ parser.add_argument("--pos_interface_cutoff",
                     help="Distance cutoff for pos/neg define")
 
 # model and dataset parameters for trainer.
+parser.add_argument("--model_path",
+                    type=str,
+                    default="model",
+                    help="default path for model logger and save")
+
+
 parser.add_argument("--data_list",
                     type=str,
                     help="tmp used for data prepare")
 parser.add_argument("--batch_size",
                     type=int,
+                    default=32,
                     help="Batch size for training")
 parser.add_argument("--device",
                     type=str,
@@ -85,27 +92,30 @@ parser.add_argument("--max_distance",
                     type=float, 
                     default=12.0, 
                     help="Max patch radius for searching") 
-parser.add_argument("learing_rate",
+parser.add_argument("--learning_rate",
                     type=float,
                     default=1e-3)
-parser.add_argument("epochs",
+parser.add_argument("--epochs",
                     type=int,
                     default=10000)
+parser.add_argument("--test_epochs",
+                    type=int,
+                    default=100)
 
 # initialization model
-parser.add_argument("n_thetas",
+parser.add_argument("--n_thetas",
                     type=int,
                     default=16,
                     help="Number of thetas for grid generation")
-parser.add_argument("n_rhos",
+parser.add_argument("--n_rhos",
                     type=int,
                     default=5,
                     help="Number of rhos for grid generation")                                     
-parser.add_argument("n_rotations",
+parser.add_argument("--n_rotations",
                     type=int,
                     default=16,
                     help="Number of rotations for feature max-out")   
-parser.add_argument("n_features",
+parser.add_argument("--n_features",
                     type=int,
                     default=5,
                     help="Number of features")   

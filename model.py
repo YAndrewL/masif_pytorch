@@ -39,7 +39,7 @@ class GaussianFiler(nn.Module):
         self.n_features = n_features
         
         # n_gauss = n_rhos * n_thetas
-        initial_coords = self.compute_initial_coordinates() 
+        initial_coords = self.compute_initial_coordinate() 
         mu_rho_initial = initial_coords[:, 0].unsqueeze(0)  # [1, n_gauss]
         mu_theta_initial = initial_coords[:, 1].unsqueeze(0)
         self.mu_rho = []
@@ -47,7 +47,6 @@ class GaussianFiler(nn.Module):
         self.sigma_rho = []
         self.sigma_theta = []
         # todo I dont know why initilized as this, since the set of parameters are trainable
-        print(mu_rho_initial.shape)
         for i in range(self.n_features):
             self.mu_rho.append(
                 nn.Parameter(mu_rho_initial).to(self.device)
@@ -61,19 +60,18 @@ class GaussianFiler(nn.Module):
             self.sigma_theta.append(
                 nn.Parameter(torch.ones_like(mu_theta_initial) * self.sigma_theta_init).to(self.device)
             )  # 1, n_gauss
-
         self.global_desc = []
         # geodisc conv, trainable
         self.b_conv = []
-        self.W_conv = []
+        wconv = []
         for i in range(self.n_features):
             self.b_conv.append(
                 nn.Parameter(torch.Tensor(self.n_thetas * self.n_rhos)).to(self.device)
             )
-            self.W_conv.append(nn.Parameter(torch.Tensor(self.n_thetas * self.n_rhos,
+            wconv.append(nn.Parameter(torch.Tensor(self.n_thetas * self.n_rhos,
                                                 self.n_thetas * self.n_rhos)).to(self.device)
             ) 
-        nn.init.xavier_normal_(self.W_conv)
+        self.W_conv = [nn.init.xavier_normal(wconv[i]) for i in range(self.n_features)]
 
 
     def compute_initial_coordinate(self):
@@ -87,7 +85,6 @@ class GaussianFiler(nn.Module):
 
         # Creating the mesh grid using torch.meshgrid
         grid_rho, grid_theta = torch.meshgrid(range_rho, range_theta, indexing='ij')
-        print(grid_rho)
         # Flattening the grid arrays
         grid_rho = grid_rho.flatten()
         grid_theta = grid_theta.flatten()
@@ -153,6 +150,7 @@ class GaussianFiler(nn.Module):
             gauss_desc = torch.sum(gauss_desc, dim=1)  # batch_size, n_feat, n_gauss,
             gauss_desc = gauss_desc.reshape(n_samples, self.n_thetas * self.n_rhos)
             conv_feat = torch.matmul(gauss_desc, W_conv) + b_conv 
+
             all_conv_feat.append(conv_feat)
         all_conv_feat = torch.stack(all_conv_feat)
         conv_feat = torch.max(all_conv_feat, 0)
@@ -161,7 +159,7 @@ class GaussianFiler(nn.Module):
 
     def forward(self, feature, rhos, thetas):
         all_desc = []
-        for i in range(self.n_feat):
+        for i in range(self.n_features):
             desc = self.gauss_conv(input_feat=feature[:, :, i].unsqueeze(2),  # [N, V, 1]
                                    rho=rhos, 
                                    theta=thetas,
@@ -192,6 +190,7 @@ class MaSIFSearch(nn.Module):
         ):
 
         super().__init__()
+        self.args = args
         self.device = args.device
         self.n_thetas = args.n_thetas
         self.n_rhos = args.n_rhos
@@ -211,6 +210,7 @@ class MaSIFSearch(nn.Module):
     def forward(self, batch):
         desc = []
         for data in batch:
+            data = data.to(self.args.device)
             feature = data[:, :, :5]
             rho = data[:, :, 5:6]
             theta = data[:,:,6:7]
