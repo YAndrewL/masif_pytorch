@@ -48,7 +48,7 @@ parser.add_argument("--max_vertex",
 parser.add_argument("--sc_w", 
                     type=int, 
                     default=0.25, 
-                    help="")  # todo what's for? 
+                    help="")  
 parser.add_argument("--sc_interaction_cutoff", 
                     type=float, 
                     default=1.5, 
@@ -70,11 +70,11 @@ parser.add_argument("--pos_interface_cutoff",
                     default=1.0,
                     help="Distance cutoff for pos/neg define")
 
-# model and dataset parameters
+# model and dataset parameters for trainer.
 parser.add_argument("--data_list",
                     type=str,
                     help="tmp used for data prepare")
-parser.add_argument("--batch_sze",
+parser.add_argument("--batch_size",
                     type=int,
                     help="Batch size for training")
 parser.add_argument("--device",
@@ -85,4 +85,27 @@ parser.add_argument("--max_distance",
                     type=float, 
                     default=12.0, 
                     help="Max patch radius for searching") 
+parser.add_argument("learing_rate",
+                    type=float,
+                    default=1e-3)
+parser.add_argument("epochs",
+                    type=int,
+                    default=10000)
 
+# initialization model
+parser.add_argument("n_thetas",
+                    type=int,
+                    default=16,
+                    help="Number of thetas for grid generation")
+parser.add_argument("n_rhos",
+                    type=int,
+                    default=5,
+                    help="Number of rhos for grid generation")                                     
+parser.add_argument("n_rotations",
+                    type=int,
+                    default=16,
+                    help="Number of rotations for feature max-out")   
+parser.add_argument("n_features",
+                    type=int,
+                    default=5,
+                    help="Number of features")   
