@@ -9,6 +9,8 @@ make_data.py
 **/*.ipynb
 **/*.sh
 /exelogs
-/dataset
+/dataset/train
+/dataset/val
+/dataset/test
 /traintmp
 /model
