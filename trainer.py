@@ -30,9 +30,8 @@ class Trainer(object):
         self.optimizer = torch.optim.Adam(self.model.parameters(), 
                                           lr=args.learning_rate)
         self.train_set, self.val_set, self.test_set = datasets
-        
         timestamp = datetime.datetime.now().strftime("%m-%d-%H-%M")
-        self.model_path = os.path.join(args.model_path, timestamp)
+        self.model_path = os.path.join(args.model_path, args.experiment_name, timestamp)
         if not os.path.exists(self.model_path):
             os.makedirs(self.model_path, exist_ok=True)
 
@@ -43,61 +42,78 @@ class Trainer(object):
     def train(self):
         #torch.autograd.set_detect_anomaly(True)
         logger.info("Training start!")
-        best_val_auc = -1
+        best_val_auc = -1  # todo did not override this for now due to extremely large AUC
         for epoch in range(self.epochs):
             self.model.train()
             train_score = []
-            for data in tqdm(self.train_set):
+            pbar = tqdm(self.train_set)
+            t_loss = []
+            for data in pbar:
                 outputs = self.model(data)
                 loss, score = self.compute_loss(outputs)
-
+                # if torch.isnan(loss):
+                #     print(data)
+                #     d=[_.detach().cpu().numpy() for _ in data]
+                #     for i,v in enumerate(d):
+                #         np.save(f"{i}.npy", v)
+                #     print([_.sum() for _ in data])
+                #     exit()
+                
+                pbar.set_postfix({"train loss": loss.item()})
                 self.optimizer.zero_grad()
                 loss.backward()
+                # for p in self.model.parameters():
+                #     if p.grad is not None and torch.isnan(p.grad.sum()):
+                #         print(p.shape, loss, score)
+                #         exit()
                 self.optimizer.step()
                 train_score.append(score)  # todo why score is computed as 1/dist
+                t_loss.append(loss)
 
-            logger.info(f"Epoch {epoch} / {self.epochs}, Training loss: {loss.item():.6f}")
+            logger.info(f"Epoch {epoch} / {self.epochs}, Training loss: {torch.mean(torch.stack(t_loss)).item():.6f}")
+
             if epoch % self.args.test_epochs == 0:
                 logger.warning(f"Iteration reached, validate and test!")
                 
                 # validtion
                 loss = []
                 score = []
-                for data in tqdm(self.val_set):
-                    self.model.eval()
-                    outputs = self.model(data)
-                    loss_, score_ = self.compute_loss(outputs)
-                    loss.append(loss_)
-                    score.append(score_)
-                loss = torch.mean(torch.stack(loss))
-                # score: [(pos:, neg), ...]
-                pos = torch.cat([d[0] for d in score])  # [N-sample,]
-                neg = torch.cat([d[1] for d in score])
-                roc = 1 - self.compute_roc_auc(pos, neg)
-                logger.info(f"Validating loss: {loss.item():.6f}")
-                logger.info(f"Validating AUR-ROC: {roc.item():.6f}")
+                self.model.eval()
+                with torch.no_grad():
+                    for data in tqdm(self.val_set):
+                        outputs = self.model(data)
+                        loss_, score_ = self.compute_loss(outputs)
+                        loss.append(loss_)
+                        score.append(score_)
+                    loss = torch.mean(torch.stack(loss))
+                    # score: [(pos:, neg), ...]
+                    pos = torch.cat([d[0] for d in score])  # [N-sample,]
+                    neg = torch.cat([d[1] for d in score])
+                    
+                    roc = 1 - self.compute_roc_auc(pos, neg)
+                    logger.info(f"Validating loss: {loss.item():.6f}")
+                    logger.info(f"Validating AUR-ROC: {roc.item():.6f}")
 
-                if roc.item() > best_val_auc:
-                    torch.save(self.model.state_dict(),
-                               self.savefile)
-                    logger.critical("Better AUC, model saved.")
+                    if roc.item() > best_val_auc:
+                        torch.save(self.model.state_dict(),
+                                self.savefile)
+                        logger.critical("Better validation AUC, model saved.")
 
-                loss = []
-                score = []
-                for data in tqdm(self.test_set):
-                    self.model.eval()
-                    outputs = self.model(data)
-                    loss_, score_ = self.compute_loss(outputs)
-                    loss.append(loss_)
-                    score.append(score_)
-                loss = torch.mean(torch.stack(loss))
-                # score: [(pos:, neg), ...]
-                pos = torch.cat([d[0] for d in score])  # [N-sample,]
-                neg = torch.cat([d[1] for d in score])
+                    loss = []
+                    score = []
+                    for data in tqdm(self.test_set):
+                        outputs = self.model(data)
+                        loss_, score_ = self.compute_loss(outputs)
+                        loss.append(loss_)
+                        score.append(score_)
+                    loss = torch.mean(torch.stack(loss))
+                    # score: [(pos:, neg), ...]
+                    pos = torch.cat([d[0] for d in score])  # [N-sample,]
+                    neg = torch.cat([d[1] for d in score])
 
-                roc = 1 - self.compute_roc_auc(pos, neg)
-                logger.info(f"testing loss: {loss.item():.6f}")
-                logger.info(f"testing AUR-ROC: {roc.item():.6f}")
+                    roc = 1 - self.compute_roc_auc(pos, neg)
+                    logger.info(f"testing loss: {loss.item():.6f}")
+                    logger.info(f"testing AUR-ROC: {roc.item():.6f}")
 
     def compute_roc_auc(self, pos, neg):
         pos = pos.detach().cpu().numpy()
@@ -109,15 +125,22 @@ class Trainer(object):
     def compute_loss(self, outputs):
         # descriptos
         binder, pos, neg = outputs
-        pos_distance = self.relu(self.dist(binder, pos) - self.args.pos_thresh)
-        neg_distance = self.relu(-self.dist(neg, binder) + self.args.neg_thresh)
+        dist_p = self.dist(binder, pos)
+        dist_n = self.dist(neg, binder)
 
-        score = (pos_distance, neg_distance)
+
+        pos_distance = self.relu(dist_p - self.args.pos_thresh)
+        neg_distance = self.relu(-dist_n + self.args.neg_thresh)
+
+        score = (dist_p, dist_n)
         pos_mean, pos_std = torch.mean(pos_distance, 0), torch.var(pos_distance, 0)
         neg_mean, neg_std = torch.mean(neg_distance, 0), torch.var(neg_distance, 0)
+        # print(pos_mean, neg_mean)
+        # print(score)
         loss = pos_mean + pos_std + neg_mean + neg_std
 
         return loss, score
 
     def dist(self, a, b):
+        assert a.shape == b.shape
         return torch.sum(torch.square(a - b), 1)

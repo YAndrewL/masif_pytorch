@@ -9,8 +9,17 @@ from arguments import parser
 from data_prepare import DataPrepare
 from trainer import Trainer
 from model import MaSIFSearch
+import torch
+import random
+import numpy
+
 
 args = parser.parse_args()
+
+torch.manual_seed(args.random_seed)
+random.seed(args.random_seed)
+numpy.random.seed(args.random_seed)
+
 
 # prepare data
 # note: execute prepare.preprocess in advance due to speed issue
@@ -29,13 +38,14 @@ prepare = DataPrepare(args,
 # dataset
 train_set = prepare.dataset(data_type='train',
                             batch_size=args.batch_size,
-                            pair_shuffle=False)
+                            pair_shuffle=args.pair_shuffle)
+
 val_set = prepare.dataset(data_type='val',
                             batch_size=args.batch_size,
-                            pair_shuffle=False)
+                            pair_shuffle=args.pair_shuffle)
 test_set = prepare.dataset(data_type='test',
                             batch_size=args.batch_size,
-                            pair_shuffle=False)
+                            pair_shuffle=args.pair_shuffle)
 
 # essential part for training
 model = MaSIFSearch(args)

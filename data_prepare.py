@@ -226,7 +226,8 @@ class DataPrepare(object):
         else: shuffle = False
         dset = DataLoader(data, batch_size=batch_size, 
                           collate_fn=collate_fn(), 
-                          shuffle=shuffle)
+                          shuffle=shuffle,
+                          num_workers=self.args.num_workers)
         return dset
 
 

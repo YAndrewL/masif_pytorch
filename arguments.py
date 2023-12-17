@@ -15,7 +15,10 @@ parser.add_argument('--raw_path', type=str, default="data/raw_pdbs")
 parser.add_argument('--processed_path', type=str, default="data/processed")
 parser.add_argument('--dataset_path', type=str, default="dataset/")
 
-
+parser.add_argument("--experiment_name",
+                    type=str,
+                    required=True,
+                    help="Experiment name, do not use whitespace, this will create folder under model")
 # sotfware
 parser.add_argument("--APBS_BIN", type=str, 
                     default="/home/liuy0n/tools/APBS-3.4.1.Linux/bin/apbs")
@@ -34,6 +37,10 @@ parser.add_argument("--PDB2XYZRN", type=str,
 
 
 # parameters
+parser.add_argument("--pair_shuffle", 
+                    type=bool, 
+                    default=True,
+                    help="Whether to shuffle positive and negative pairs") 
 parser.add_argument("--random_seed", 
                     type=int, 
                     default=42, 
@@ -46,7 +53,6 @@ parser.add_argument("--max_vertex",
                     type=int, 
                     default=200, 
                     help="Max vertex neighbor for input feature.") 
-
 
 # for shape complementarity
 parser.add_argument("--sc_w", 
@@ -86,8 +92,12 @@ parser.add_argument("--data_list",
                     help="tmp used for data prepare")
 parser.add_argument("--batch_size",
                     type=int,
-                    default=64,
+                    default=128,
                     help="Batch size for training")
+parser.add_argument("--num_workers",
+                    type=int,
+                    default=5,
+                    help="Number of workers for data loader")
 parser.add_argument("--device",
                     type=str,
                     default='cuda',
@@ -104,7 +114,7 @@ parser.add_argument("--epochs",
                     default=10000)
 parser.add_argument("--test_epochs",
                     type=int,
-                    default=100)
+                    default=10)
 
 parser.add_argument("--pos_thresh",
                     type=float,
@@ -132,3 +142,10 @@ parser.add_argument("--n_features",
                     type=int,
                     default=5,
                     help="Number of features")   
+
+# for benchmark
+parser.add_argument("--benchmark",
+                    type=bool,
+                    default=False,
+                    help="Tmp used for generating benchmark files using pymesh surface")
+

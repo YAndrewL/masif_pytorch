@@ -32,8 +32,8 @@ class SurfaceDataset(Dataset):
     def __getitem__(self, index):
         # shuffle list every time for positive and negative
         if self.pair_shuffle:
-            pidx = random.randint(0, self.data_len)
-            nidx = random.randint(0, self.data_len)
+            pidx = random.randint(0, self.data_len - 1)
+            nidx = random.randint(0, self.data_len - 1)
         else:
             pidx = index
             nidx = index
@@ -71,9 +71,9 @@ def collate_fn(flip=True):
     # wrapper
     def collate(batch):
         # collate tuple
-        binder = torch.cat([x for x in batch[0]], dim=0)
-        pos = torch.cat([x for x in batch[1]], dim=0)
-        neg = torch.cat([x for x in batch[2]], dim=0)
+        binder = torch.cat([x[0] for x in batch], dim=0)
+        pos = torch.cat([x[1] for x in batch], dim=0)
+        neg = torch.cat([x[2] for x in batch], dim=0)
 
         # batch size =1
         if len(binder.shape) == 2:
@@ -101,4 +101,3 @@ def collate_fn(flip=True):
         binder = torch.cat(b_feat, dim=-1)
         return binder, pos, neg
     return collate
-    
