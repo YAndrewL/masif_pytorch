@@ -20,9 +20,15 @@ torch.manual_seed(args.random_seed)
 random.seed(args.random_seed)
 np.random.seed(args.random_seed)
 
-
 # prepare data
 # note: execute prepare.preprocess in advance due to speed issue
+
+if args.prepare_data:
+    prepare = DataPrepare(args, data_list=[args.data_list])  # pass a single PDB each time
+    prepare.preprocess()
+    prepare.cache()
+    exit(0)
+
 training_list = open("data/list/train_all.txt").readlines()
 training_list = [x.strip() for x in training_list]
 
@@ -32,8 +38,6 @@ testing_list = [x.strip() for x in testing_list]
 prepare = DataPrepare(args, 
                       training_list=training_list, 
                       testing_list=testing_list)
-# prepare.preprocess()
-# prepare.cache()
 
 # dataset
 train_set = prepare.dataset(data_type='train',

@@ -18,3 +18,4 @@ make_data.py
 /benchmark_dataset
 /ligand
 /masif_dataset
+/cache

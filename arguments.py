@@ -10,10 +10,19 @@ import argparse
 parser = argparse.ArgumentParser()
 
 # data set paths
-parser.add_argument("--data_path", type=str, default="data/")
-parser.add_argument('--raw_path', type=str, default="data/raw_pdbs")
-parser.add_argument('--processed_path', type=str, default="data/processed")
-parser.add_argument('--dataset_path', type=str, default="benchmark_dataset")
+parser.add_argument("--data_path", 
+                    type=str, 
+                    default="data")
+parser.add_argument('--raw_path', 
+                    type=str, 
+                    default="data/raw_pdbs")
+parser.add_argument('--processed_path', 
+                    type=str, 
+                    default="data/processed")
+parser.add_argument('--dataset_path', 
+                    type=str, 
+                    default="benchmark_dataset",
+                    help="Set this name to xx_dataset for easily check")
 
 parser.add_argument("--experiment_name",
                     type=str,
@@ -86,10 +95,22 @@ parser.add_argument("--model_path",
                     default="model",
                     help="default path for model logger and save")
 
-
+# data prepare
 parser.add_argument("--data_list",
                     type=str,
-                    help="tmp used for data prepare")
+                    help="tmp used for data prepare, pass into dataset")
+parser.add_argument("--prepare_data",
+                    type=bool,
+                    default=False,
+                    help="tmp used for data prepare in cluster nodes")
+parser.add_argument("--dataset_override",
+                    type=bool,
+                    default=False,
+                    help="tmp used for data override")
+
+
+
+
 parser.add_argument("--batch_size",
                     type=int,
                     default=128,
@@ -149,3 +170,8 @@ parser.add_argument("--benchmark",
                     default=False,
                     help="Tmp used for generating benchmark files using pymesh surface")
 
+
+parser.add_argument("--prepre",
+                    type=bool,
+                    default=False,
+                    help="Tmp used for generating benchmark files using pymesh surface")

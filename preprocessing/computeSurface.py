@@ -12,8 +12,6 @@ import os
 from subprocess import Popen, PIPE
 import pymol
 from pymol import cmd
-import time
-import trimesh
 import Bio.PDB as biopdb
 from Bio.SeqUtils import IUPACData
 PROTEIN_LETTERS = [x.upper() for x in IUPACData.protein_letters_3to1.keys()]
@@ -98,6 +96,18 @@ def protonate(args, infilename, outfilename):
     # out_pdb_file: output file where to save the protonated pdb file. 
     
     # Remove protons first, in case the structure is already protonated
+    # download pdb first
+    if not os.path.exists(infilename):
+        pdb = infilename.split("/")[-1].split(".")[0]  # ABCD
+        dir = ''.join(infilename.split("/")[:-1])
+        print(f"PDB file {pdb} do not exit")
+        pdbl = biopdb.PDBList()
+        pdbl.retrieve_pdb_file(pdb, pdir=dir)
+        print(f"PDB file {pdb} do not exit")
+        assert os.path.exists(infilename) == True
+        print("Successfully downloaded forom PDB.")
+
+    assert os.path.exists(infilename) == True, "PDB do not exist"
     reduce_arg = [args.REDUCE_BIN, "-Trim", infilename]
     p2 = Popen(reduce_arg, stdout=PIPE, stderr=PIPE)
     stdout, stderr = p2.communicate()

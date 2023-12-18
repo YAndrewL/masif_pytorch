@@ -27,17 +27,6 @@ from preprocessing.geomesh import GeoMesh
 from dataset import SurfaceDataset, collate_fn
 from torch.utils.data import DataLoader
 
-# dataset using pytorch
-
-
-# for data preprocessing
-# PDB -> precompute features and shortest path
-# done surface use pymol; shortest path use 
-# load functions from preprocessing
-
-# todo cache data for model use
-
-
 
 class DataPrepare(object):
     def __init__(self, args, 
@@ -51,10 +40,20 @@ class DataPrepare(object):
         self.testing_list = testing_list
         self.data_list = training_list + testing_list
 
-        if data_list:
-            self.data_list = data_list
-
         self.collapse_rate = collapse_rate
+
+        # some sanity check for dataset
+        assert args.dataset_path.split("_")[-1] == "dataset", "Suffix should be dataset, check argument helper"
+        if args.prepare_data:
+            if data_list:
+                self.data_list = data_list
+            else:
+                raise RuntimeError("data list cannot be empty under data peparation mode")
+
+            if os.listdir(args.dataset_path):
+                if not args.dataset_override:
+                    raise RuntimeError(f"{args.data_path} is not empty, please clear the contents, or it will be override by setting --dataset_override to True")
+
 
     def run_protonate(self, args, data):
         input_file = pjoin(args.raw_path, data.split('_')[0] + '.pdb')
@@ -85,9 +84,6 @@ class DataPrepare(object):
         input_file = pjoin(args.processed_path, data, f'p{num}.pdb')
         return generate_apbs(args, input_file, vertex)
 
-    def download_pdb(self):
-        pass
-
     def preprocess(self):
         args = self.args
         data_list = self.data_list
@@ -96,8 +92,8 @@ class DataPrepare(object):
         if not os.path.exists(processed_path):
             os.mkdir(processed_path) 
         
-        print("Start processing data...")
         for data in data_list:
+            print(f"Start processing data {data}")
             start_time = time.time()
             # todo consider multi-processing in the future
             # data is like 1A0G_A_B
