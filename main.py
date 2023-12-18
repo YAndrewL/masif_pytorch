@@ -43,7 +43,6 @@ prepare = DataPrepare(args,
 train_set = prepare.dataset(data_type='train',
                             batch_size=args.batch_size,
                             pair_shuffle=args.pair_shuffle)
-
 val_set = prepare.dataset(data_type='val',
                             batch_size=args.batch_size,
                             pair_shuffle=args.pair_shuffle)

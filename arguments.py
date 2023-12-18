@@ -23,6 +23,12 @@ parser.add_argument('--dataset_path',
                     type=str, 
                     default="benchmark_dataset",
                     help="Set this name to xx_dataset for easily check")
+parser.add_argument("--residue_lib",
+                    type=str,
+                    default="ligand",
+                    help="amino acids file library in SDF format")
+
+
 
 parser.add_argument("--experiment_name",
                     type=str,

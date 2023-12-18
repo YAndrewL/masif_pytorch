@@ -78,7 +78,7 @@ class DataPrepare(object):
 
     def run_hydro(self, args, data, names, num):
         input_file = pjoin(args.processed_path, data, f'p{num}.pdb')
-        return generate_hydrophabicity(input_file, names)
+        return generate_hydrophabicity(args, input_file, names)
 
     def run_apbs(self, args, data, vertex, num):
         input_file = pjoin(args.processed_path, data, f'p{num}.pdb')
