@@ -12,7 +12,8 @@ make_data.py
 /dataset/train
 /dataset/val
 /dataset/test
-/traintmp
+/train_tmp_log
 /model
 /dcgm
 /benchmark_surfaces
+/ligand

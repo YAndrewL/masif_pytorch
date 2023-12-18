@@ -14,6 +14,7 @@ import os
 import numpy as np
 from sklearn.metrics import roc_auc_score
 from tqdm import tqdm
+import yaml
 
 
 class Trainer(object):
@@ -27,6 +28,7 @@ class Trainer(object):
         self.args = args
         self.epochs = args.epochs
         self.model = model.to(args.device)
+
         self.optimizer = torch.optim.Adam(self.model.parameters(), 
                                           lr=args.learning_rate)
         self.train_set, self.val_set, self.test_set = datasets
@@ -37,20 +39,34 @@ class Trainer(object):
 
         self.logger = logger.add(os.path.join(self.model_path, 'logger.log'))
         self.savefile = os.path.join(self.model_path, 'model.pth')
+        
+        # save config
+        config_file = os.path.join(self.model_path, 'config.yaml')
+        self.config_save(config_file)
+
         self.relu = nn.ReLU()
+
+        # parameters
+        for name, params in self.model.named_parameters():
+            logger.info(f"Trainable parameters in model: {name}")
+        n_params = sum(p.numel() for p in self.model.parameters())
+        logger.info(f"Amount of trainable parameters : {n_params}")
+
 
     def train(self):
         #torch.autograd.set_detect_anomaly(True)
         logger.info("Training start!")
-        best_val_auc = -1  # todo did not override this for now due to extremely large AUC
+        best_val_auc = -1 
         for epoch in range(self.epochs):
             self.model.train()
             train_score = []
             pbar = tqdm(self.train_set)
             t_loss = []
+            t_score = []
             for data in pbar:
                 outputs = self.model(data)
                 loss, score = self.compute_loss(outputs)
+
                 # if torch.isnan(loss):
                 #     print(data)
                 #     d=[_.detach().cpu().numpy() for _ in data]
@@ -59,18 +75,29 @@ class Trainer(object):
                 #     print([_.sum() for _ in data])
                 #     exit()
                 
-                pbar.set_postfix({"train loss": loss.item()})
+                pbar.set_postfix({"train loss": loss.item(), 
+                                  "positive mean": score[0].mean().item(),
+                                  "negative mean": score[1].mean().item()})
                 self.optimizer.zero_grad()
                 loss.backward()
+
                 # for p in self.model.parameters():
                 #     if p.grad is not None and torch.isnan(p.grad.sum()):
                 #         print(p.shape, loss, score)
                 #         exit()
                 self.optimizer.step()
-                train_score.append(score)  # todo why score is computed as 1/dist
+                train_score.append(score)  
                 t_loss.append(loss)
+                t_score.append(score)
+
+
+            pos = torch.cat([d[0] for d in t_score])  # [N-sample,]
+            neg = torch.cat([d[1] for d in t_score])     
+            roc = 1 - self.compute_roc_auc(pos, neg)
 
             logger.info(f"Epoch {epoch} / {self.epochs}, Training loss: {torch.mean(torch.stack(t_loss)).item():.6f}")
+            logger.info(f"Training AUR-ROC: {roc.item():.6f}")
+
 
             if epoch % self.args.test_epochs == 0:
                 logger.warning(f"Iteration reached, validate and test!")
@@ -81,6 +108,7 @@ class Trainer(object):
                 self.model.eval()
                 with torch.no_grad():
                     for data in tqdm(self.val_set):
+
                         outputs = self.model(data)
                         loss_, score_ = self.compute_loss(outputs)
                         loss.append(loss_)
@@ -94,9 +122,14 @@ class Trainer(object):
                     logger.info(f"Validating loss: {loss.item():.6f}")
                     logger.info(f"Validating AUR-ROC: {roc.item():.6f}")
 
+                    # for name, params in self.model.named_parameters():
+                    #     if 'b_conv' in name:
+                    #         print(params)
+
                     if roc.item() > best_val_auc:
                         torch.save(self.model.state_dict(),
                                 self.savefile)
+                        best_val_auc = roc.item()
                         logger.critical("Better validation AUC, model saved.")
 
                     loss = []
@@ -128,13 +161,12 @@ class Trainer(object):
         dist_p = self.dist(binder, pos)
         dist_n = self.dist(neg, binder)
 
-
         pos_distance = self.relu(dist_p - self.args.pos_thresh)
         neg_distance = self.relu(-dist_n + self.args.neg_thresh)
 
         score = (dist_p, dist_n)
-        pos_mean, pos_std = torch.mean(pos_distance, 0), torch.var(pos_distance, 0)
-        neg_mean, neg_std = torch.mean(neg_distance, 0), torch.var(neg_distance, 0)
+        pos_mean, pos_std = torch.mean(pos_distance, 0), torch.std(pos_distance, 0)
+        neg_mean, neg_std = torch.mean(neg_distance, 0), torch.std(neg_distance, 0)
         # print(pos_mean, neg_mean)
         # print(score)
         loss = pos_mean + pos_std + neg_mean + neg_std
@@ -144,3 +176,9 @@ class Trainer(object):
     def dist(self, a, b):
         assert a.shape == b.shape
         return torch.sum(torch.square(a - b), 1)
+    
+    def config_save(self, saver):
+        save_dict = vars(self.args)
+        assert saver.split('.')[-1] == 'yaml'
+        with open(saver, 'w') as file:
+            yaml.dump(save_dict, file)

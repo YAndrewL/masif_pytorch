@@ -11,14 +11,14 @@ from trainer import Trainer
 from model import MaSIFSearch
 import torch
 import random
-import numpy
+import numpy as np
 
 
 args = parser.parse_args()
 
 torch.manual_seed(args.random_seed)
 random.seed(args.random_seed)
-numpy.random.seed(args.random_seed)
+np.random.seed(args.random_seed)
 
 
 # prepare data

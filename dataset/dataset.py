@@ -37,8 +37,9 @@ class SurfaceDataset(Dataset):
         else:
             pidx = index
             nidx = index
-
-        binder = torch.from_numpy(self.binder[index]).unsqueeze(0).to(torch.float32)
+            
+        # positive pair should always be same
+        binder = torch.from_numpy(self.binder[pidx]).unsqueeze(0).to(torch.float32)
         pos = torch.from_numpy(self.positive[pidx]).unsqueeze(0).to(torch.float32)
         neg = torch.from_numpy(self.negative[nidx]).unsqueeze(0).to(torch.float32)
 

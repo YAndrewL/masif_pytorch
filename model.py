@@ -32,6 +32,7 @@ class GaussianFiler(nn.Module):
         # to resolve the origin ambiguity in angular coordinate
         self.device = args.device
 
+        self.relu = nn.ReLU()
         self.sigma_rho_init = (
             self.max_rho / 8
         )  # in MoNet was 0.005 with max radius=0.04 (i.e. 8 times smaller)
@@ -47,31 +48,28 @@ class GaussianFiler(nn.Module):
         self.sigma_rho = []
         self.sigma_theta = []
         # todo I dont know why initilized as this, since the set of parameters are trainable
-        for i in range(self.n_features):
-            self.mu_rho.append(
-                nn.Parameter(mu_rho_initial).to(self.device)
+        self.mu_rho = nn.ParameterList(
+            [nn.Parameter(mu_rho_initial).to(self.device) for _ in range(self.n_features)]
             )  # 1, n_gauss
-            self.mu_theta.append(
-                nn.Parameter(mu_theta_initial).to(self.device)
-            )  # 1, n_gauss
-            self.sigma_rho.append(
-                nn.Parameter(torch.ones_like(mu_rho_initial) * self.sigma_rho_init).to(self.device)
-            )  # 1, n_gauss
-            self.sigma_theta.append(
-                nn.Parameter(torch.ones_like(mu_theta_initial) * self.sigma_theta_init).to(self.device)
-            )  # 1, n_gauss
+        self.mu_theta = nn.ParameterList(
+            [nn.Parameter(mu_theta_initial).to(self.device) for _ in range(self.n_features)]
+            )
+        self.sigma_rho = nn.ParameterList(
+            [nn.Parameter(torch.ones_like(mu_rho_initial) * self.sigma_rho_init).to(self.device) for _ in range(self.n_features)]
+            )
+        self.sigma_theta = nn.ParameterList(
+            [nn.Parameter(torch.ones_like(mu_theta_initial) * self.sigma_theta_init).to(self.device) for _ in range(self.n_features)]
+            )
         self.global_desc = []
         # geodisc conv, trainable
-        self.b_conv = []
-        wconv = []
-        for i in range(self.n_features):
-            self.b_conv.append(
-                nn.Parameter(torch.Tensor(self.n_thetas * self.n_rhos)).to(self.device)
+        self.b_conv = nn.ParameterList(
+            [nn.Parameter(torch.Tensor(self.n_thetas * self.n_rhos)).to(self.device) for _ in range(self.n_features)]
             )
-            wconv.append(nn.Parameter(torch.Tensor(self.n_thetas * self.n_rhos,
-                                                self.n_thetas * self.n_rhos)).to(self.device)
-            ) 
-        self.W_conv = [nn.init.xavier_normal_(wconv[i]) for i in range(self.n_features)]
+        wconv = [nn.Parameter(torch.Tensor(self.n_thetas * self.n_rhos,
+                                            self.n_thetas * self.n_rhos)).to(self.device) for _ in range(self.n_features)]
+        self.W_conv = nn.ParameterList(
+            [nn.init.xavier_normal_(wconv[i]) for i in range(self.n_features)]
+            )
 
 
     def compute_initial_coordinate(self):
@@ -155,7 +153,7 @@ class GaussianFiler(nn.Module):
         all_conv_feat = torch.stack(all_conv_feat)
         conv_feat = torch.max(all_conv_feat, 0)
         out = conv_feat.values  # [batch_size, n_rhos * n_thetas]
-        return out
+        return self.relu(out)
 
     def forward(self, feature, rhos, thetas):
         all_desc = []
@@ -170,8 +168,8 @@ class GaussianFiler(nn.Module):
                                    W_conv=self.W_conv[i],
                                    b_conv=self.b_conv[i])
             all_desc.append(desc)
-        all_desc = torch.stack(all_desc, dim=0)  # [n_feat, N, dim]  # lyf stack axis should be zero!
-        
+        all_desc = torch.stack(all_desc, dim=1)  # [n_feat, N, dim]  # lyf stack axis should be zero!
+
         return all_desc.reshape(-1, self.n_features * self.n_rhos * self.n_thetas)
 
 class MaSIFSearch(nn.Module):
@@ -206,7 +204,6 @@ class MaSIFSearch(nn.Module):
                              self.n_thetas * self.n_rhos)
         self.relu = nn.ReLU()
 
-
     def forward(self, batch):
         desc = []
         for data in batch:
@@ -215,7 +212,7 @@ class MaSIFSearch(nn.Module):
             rho = data[:, :, 5:6].clone()
             theta = data[:,:,6:7].clone()
             out = self.gauss_conv(feature=feature, rhos=rho, thetas=theta)
-            out = self.relu(out)
+            # out = self.relu(out)
             out = self.fcc(out)
             desc.append(out)
         return desc

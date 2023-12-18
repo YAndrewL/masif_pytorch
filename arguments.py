@@ -39,7 +39,7 @@ parser.add_argument("--PDB2XYZRN", type=str,
 # parameters
 parser.add_argument("--pair_shuffle", 
                     type=bool, 
-                    default=True,
+                    default=False,
                     help="Whether to shuffle positive and negative pairs") 
 parser.add_argument("--random_seed", 
                     type=int, 
@@ -108,7 +108,7 @@ parser.add_argument("--max_distance",
                     help="Max patch radius for searching") 
 parser.add_argument("--learning_rate",
                     type=float,
-                    default=1e-3)
+                    default=0.001)
 parser.add_argument("--epochs",
                     type=int,
                     default=10000)
