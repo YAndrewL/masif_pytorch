@@ -24,7 +24,7 @@ from preprocessing.cacheSample import generate_data_cache
 
 from preprocessing.geomesh import GeoMesh
 
-from dataset.dataset import SurfaceDataset, collate_fn
+from dataset import SurfaceDataset, collate_fn
 from torch.utils.data import DataLoader
 
 # dataset using pytorch

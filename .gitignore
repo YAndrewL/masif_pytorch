@@ -15,5 +15,6 @@ make_data.py
 /train_tmp_log
 /model
 /dcgm
-/benchmark_surfaces
+/benchmark_dataset
 /ligand
+/masif_dataset

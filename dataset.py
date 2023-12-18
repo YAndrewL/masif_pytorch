@@ -90,10 +90,10 @@ def collate_fn(flip=True):
         if flip:
             b_feat = []
             for i in range(7):
-                if i == 3 or i == 5:
+                if i == 3 or i == 5:   
                     b_feat.append(binder[:, :, i].unsqueeze(-1))
                 elif i == 6:
-                    # rho
+                    # theta
                     feat = 2 * pi - binder[:, :, i]
                     b_feat.append(feat.unsqueeze(-1))
                 else:

@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, default="data/")
 parser.add_argument('--raw_path', type=str, default="data/raw_pdbs")
 parser.add_argument('--processed_path', type=str, default="data/processed")
-parser.add_argument('--dataset_path', type=str, default="dataset/")
+parser.add_argument('--dataset_path', type=str, default="benchmark_dataset")
 
 parser.add_argument("--experiment_name",
                     type=str,
