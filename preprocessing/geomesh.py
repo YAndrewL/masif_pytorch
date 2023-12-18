@@ -102,7 +102,7 @@ class GeoMesh(pymeshlab.MeshSet):
         feature_dict = self.metadata
         assert 'input_feature' in feature_dict, "Not all feature are processed!"
         # for logp
-        # todo all in min-max ,need to talk
+        # todo all in min-max
         logp = feature_dict['input_feature'][:, :, 3]
         scaler = MinMaxScaler(feature_range=(-1, 1))
         logp = scaler.fit_transform(logp)
@@ -118,13 +118,11 @@ class GeoMesh(pymeshlab.MeshSet):
         self.feat_norm_flag = True
 
     def save_feature(self, file):
-        # todo here change to save dict
-        # feature = self.metadata['input_feature']
         if self.feat_norm_flag:
             # save features to npy
             np.save(file, self.metadata)
         else:
-            raise SyntaxError("Feature not normalized.")
+            raise RuntimeError("Feature not normalized.")
 
     def load_feature(self, file):
         feat = np.load(file, allow_pickle=True).item()

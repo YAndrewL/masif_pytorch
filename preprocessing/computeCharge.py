@@ -40,8 +40,7 @@ def generate_charge(pdb_filename, vertices, names):
         chain_id = res.get_parent().get_id()
         if chain_id == "":
             chain_id = " "
-        # hack 
-        # lyf not quite sure eveytime works here
+
         res_id = res.get_id()
         if res_id[0] != ' ':
             res_id = (' ', res_id[1], res_id[2])

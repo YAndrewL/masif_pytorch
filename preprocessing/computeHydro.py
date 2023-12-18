@@ -5,7 +5,6 @@
 @Author :  Yufan Liu
 @Desc   :  Hydrophobility (here use logp) feature
 '''
-# todo THIS used too many loops, but I'm lazy to modify this now, and compute them in advance, idc
 import Bio.PDB as biopdb
 import numpy as np
 import os

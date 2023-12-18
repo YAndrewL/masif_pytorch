@@ -168,7 +168,7 @@ class GaussianFiler(nn.Module):
                                    W_conv=self.W_conv[i],
                                    b_conv=self.b_conv[i])
             all_desc.append(desc)
-        all_desc = torch.stack(all_desc, dim=1)  # [n_feat, N, dim]  # lyf stack axis should be zero!
+        all_desc = torch.stack(all_desc, dim=1)  # [n_feat, N, dim]  
 
         return all_desc.reshape(-1, self.n_features * self.n_rhos * self.n_thetas)
 

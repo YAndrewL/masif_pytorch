@@ -95,7 +95,6 @@ class DataPrepare(object):
         for data in data_list:
             print(f"Start processing data {data}")
             start_time = time.time()
-            # todo consider multi-processing in the future
             # data is like 1A0G_A_B
             pdb, chain1, chain2 = data.split('_')
             if not os.path.exists(pjoin(processed_path, data)):
@@ -103,7 +102,6 @@ class DataPrepare(object):
 
             logfile = pjoin(processed_path, data, 'preprocess.log')
             handler = logger.add(logfile)
-            # todo remember to close this
             # Stage I. generate surface 
             # 1. protonate
             self.run_protonate(args, data)
@@ -150,7 +148,7 @@ class DataPrepare(object):
                 
                 # initial a mesh, add 3 features above
                 # Polar coords 
-                # 4. shape index # todo
+                # 4. shape index 
                 rho, theta, neighbor_id, neighbor_mask = generate_polar_coords(args, mesh)
                 mesh.set_attribute('rho', rho)
                 mesh.set_attribute('theta', theta)

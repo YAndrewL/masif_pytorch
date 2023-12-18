@@ -40,7 +40,7 @@ def generate_apbs(args, infilename, vertices):
         "--apbs-input",
         infilename,
         tmp_file_base + '.pqr',
-    ]  # todo PDB2PQR will ignore non standard aas, change later
+    ]  # todo PDB2PQR will ignore incomplete residues
     p2 = Popen(pqr_args, stdout=PIPE, stderr=PIPE, cwd=directory)
     stdout, stderr = p2.communicate()
     # should excuted in the same path
