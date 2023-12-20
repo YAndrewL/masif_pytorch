@@ -9,4 +9,4 @@ python main.py
 
 Parameter descriptions are listed `arguments.py`
 
-![picture]("dist.jpg")
+![picture](dist.jpg)
