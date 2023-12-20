@@ -165,8 +165,8 @@ class Trainer(object):
         neg_distance = self.relu(-dist_n + self.args.neg_thresh)
 
         score = (dist_p, dist_n)
-        pos_mean, pos_std = torch.mean(pos_distance, 0), torch.std(pos_distance, 0)
-        neg_mean, neg_std = torch.mean(neg_distance, 0), torch.std(neg_distance, 0)
+        pos_mean, pos_std = torch.mean(pos_distance, 0), torch.var(pos_distance, 0)
+        neg_mean, neg_std = torch.mean(neg_distance, 0), torch.var(neg_distance, 0)
         # print(pos_mean, neg_mean)
         # print(score)
         loss = pos_mean + pos_std + neg_mean + neg_std

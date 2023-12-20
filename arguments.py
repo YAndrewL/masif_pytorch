@@ -94,11 +94,16 @@ parser.add_argument("--pos_interface_cutoff",
                     type=float,
                     default=1.0,
                     help="Distance cutoff for pos/neg define")
+parser.add_argument("--collapse_rate",
+                    type=float,
+                    default=0.2,
+                    help="Collapse rate for surface optimization")
+
 
 # model and dataset parameters for trainer.
 parser.add_argument("--model_path",
                     type=str,
-                    default="model",
+                    default="experiments",
                     help="default path for model logger and save")
 
 # data prepare
@@ -113,8 +118,10 @@ parser.add_argument("--dataset_override",
                     type=bool,
                     default=False,
                     help="tmp used for data override")
-
-
+parser.add_argument("--dataset_cache",
+                    type=bool,
+                    default=False,
+                    help="tmp used for dataset caching")
 
 
 parser.add_argument("--batch_size",
@@ -138,10 +145,10 @@ parser.add_argument("--learning_rate",
                     default=0.001)
 parser.add_argument("--epochs",
                     type=int,
-                    default=10000)
+                    default=50)
 parser.add_argument("--test_epochs",
                     type=int,
-                    default=10)
+                    default=5)
 
 parser.add_argument("--pos_thresh",
                     type=float,
@@ -170,14 +177,4 @@ parser.add_argument("--n_features",
                     default=5,
                     help="Number of features")   
 
-# for benchmark
-parser.add_argument("--benchmark",
-                    type=bool,
-                    default=False,
-                    help="Tmp used for generating benchmark files using pymesh surface")
 
-
-parser.add_argument("--prepre",
-                    type=bool,
-                    default=False,
-                    help="Tmp used for generating benchmark files using pymesh surface")

@@ -19,3 +19,5 @@ make_data.py
 /ligand
 /masif_dataset
 /cache
+/experiments
+/data_prepare_logs

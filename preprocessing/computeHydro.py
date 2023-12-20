@@ -35,8 +35,10 @@ def generate_hydrophabicity(args, infilename, names):
         """
         # code above are compute by structure, move to by sdf of amino libaray
         res_id = residue.get_id()
-        residue_name = residue.get_residues()
-        mol = Chem.SDMolSupplier(os.path.join(args.residue_lib, f"{res_id}_ideal.sdf"))[0]
+        if res_id[0] != ' ':
+            res_id = (' ', res_id[1], res_id[2])
+        residue_name = residue.get_resname()
+        mol = Chem.SDMolSupplier(os.path.join(args.residue_lib, f"{residue_name}_ideal.sdf"))[0]
         if mol is None:
             raise RuntimeError(f"In valid SDF file of residue {residue_name} in {infilename}, location {res_id}")
         logp_mol = AllChem.CalcCrippenDescriptors(mol)[0]

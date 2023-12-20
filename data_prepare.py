@@ -33,14 +33,14 @@ class DataPrepare(object):
                  training_list=[],
                  testing_list=[],
                  data_list=None,
-                 collapse_rate=0.1,  # for mesh optimize collapse
                  ):
         self.args = args
         self.training_list = training_list
         self.testing_list = testing_list
         self.data_list = training_list + testing_list
 
-        self.collapse_rate = collapse_rate
+        self.collapse_rate = args.collapse_rate  # for mesh optimize collapse
+
 
         # some sanity check for dataset
         assert args.dataset_path.split("_")[-1] == "dataset", "Suffix should be dataset, check argument helper"
@@ -49,10 +49,6 @@ class DataPrepare(object):
                 self.data_list = data_list
             else:
                 raise RuntimeError("data list cannot be empty under data peparation mode")
-
-            if os.listdir(args.dataset_path):
-                if not args.dataset_override:
-                    raise RuntimeError(f"{args.data_path} is not empty, please clear the contents, or it will be override by setting --dataset_override to True")
 
 
     def run_protonate(self, args, data):
@@ -93,7 +89,6 @@ class DataPrepare(object):
             os.mkdir(processed_path) 
         
         for data in data_list:
-            print(f"Start processing data {data}")
             start_time = time.time()
             # data is like 1A0G_A_B
             pdb, chain1, chain2 = data.split('_')
@@ -102,6 +97,8 @@ class DataPrepare(object):
 
             logfile = pjoin(processed_path, data, 'preprocess.log')
             handler = logger.add(logfile)
+            logger.info(f"Start processing data {data}")
+
             # Stage I. generate surface 
             # 1. protonate
             self.run_protonate(args, data)

@@ -12,7 +12,7 @@ from model import MaSIFSearch
 import torch
 import random
 import numpy as np
-
+import os
 
 args = parser.parse_args()
 
@@ -26,18 +26,27 @@ np.random.seed(args.random_seed)
 if args.prepare_data:
     prepare = DataPrepare(args, data_list=[args.data_list])  # pass a single PDB each time
     prepare.preprocess()
-    prepare.cache()
     exit(0)
 
-training_list = open("data/list/train_all.txt").readlines()
+training_list = open("data/list/train_update.txt").readlines()
 training_list = [x.strip() for x in training_list]
 
-testing_list = open("data/list/test_all.txt").readlines()
+testing_list = open("data/list/test_update.txt").readlines()
 testing_list = [x.strip() for x in testing_list]
 
+# check whether to cache new data.
 prepare = DataPrepare(args, 
-                      training_list=training_list, 
-                      testing_list=testing_list)
+                training_list=training_list, 
+                testing_list=testing_list)
+
+if args.dataset_cache:
+    if os.listdir(args.dataset_path):
+        if not args.dataset_override:
+            raise RuntimeError(f"{args.data_path} is not empty, please clear the contents, or override it by setting --dataset_override to True")
+        else: 
+            prepare.cache()
+    else:
+        prepare.cache()
 
 # dataset
 train_set = prepare.dataset(data_type='train',
