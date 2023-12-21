@@ -105,7 +105,7 @@ def protonate(args, infilename, outfilename):
         pdbl.retrieve_pdb_file(pdb, pdir=dir)
         print(f"PDB file {pdb} do not exit")
         assert os.path.exists(infilename) == True
-        print("Successfully downloaded forom PDB.")
+        print("Successfully downloaded from PDB.")
 
     assert os.path.exists(infilename) == True, "PDB do not exist"
     reduce_arg = [args.REDUCE_BIN, "-Trim", infilename]

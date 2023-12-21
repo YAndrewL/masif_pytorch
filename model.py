@@ -10,6 +10,8 @@
 import torch  
 import torch.nn as nn
 import numpy as np
+import random
+
 pi = torch.tensor(3.141592653589793)
 
 class GaussianFiler(nn.Module):
@@ -39,6 +41,12 @@ class GaussianFiler(nn.Module):
         self.sigma_theta_init = 1.0  # 0.25
         self.n_features = n_features
         
+        # set seed again here, to ensure proper initialization
+        torch.manual_seed(args.random_seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(args.random_seed)
+
+
         # n_gauss = n_rhos * n_thetas
         initial_coords = self.compute_initial_coordinate() 
         mu_rho_initial = initial_coords[:, 0].unsqueeze(0)  # [1, n_gauss]
@@ -192,7 +200,7 @@ class MaSIFSearch(nn.Module):
         self.device = args.device
         self.n_thetas = args.n_thetas
         self.n_rhos = args.n_rhos
-        self.n_features = args.n_features
+        self.n_features = np.sum(args.feature_mask)
         self.n_rotations = args.n_rotations
 
         self.gauss_conv = GaussianFiler(args=args, 
@@ -209,9 +217,16 @@ class MaSIFSearch(nn.Module):
         for data in batch:
             data = data.to(self.args.device)
             feature = data[:, :, :5].clone()
+            
+            # mask features
+            feat = []
+            for i, m in enumerate(self.args.feature_mask):
+                if m == 1:
+                    feat.append(feature[:, :, i])
+            feat = torch.stack(feat, dim=-1)
             rho = data[:, :, 5:6].clone()
             theta = data[:,:,6:7].clone()
-            out = self.gauss_conv(feature=feature, rhos=rho, thetas=theta)
+            out = self.gauss_conv(feature=feat, rhos=rho, thetas=theta)
             # out = self.relu(out)
             out = self.fcc(out)
             desc.append(out)

@@ -170,7 +170,6 @@ class Trainer(object):
         # print(pos_mean, neg_mean)
         # print(score)
         loss = pos_mean + pos_std + neg_mean + neg_std
-
         return loss, score
 
     def dist(self, a, b):
