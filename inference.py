@@ -18,6 +18,7 @@ import numpy as np
 import os
 
 args = parser.parse_args()
+args.data_list = args.data_list.upper()
 
 torch.manual_seed(args.random_seed)
 random.seed(args.random_seed)
@@ -54,13 +55,40 @@ prepare = DataPrepare(args, data_list=[args.data_list])  # pass a single PDB eac
 prepare.preprocess()
 
 # data part
-p1_feat = np.load(os.path.join(args.processed_path, args.data_list, 'p1_input_feat.npy'))
-p2_feat = np.load(os.path.join(args.processed_path, args.data_list, 'p2_input_feat.npy'))
+p1_feat = np.load(os.path.join(args.processed_path, args.data_list, 'p1_input_feat.npy'), allow_pickle=True).item()
+p2_feat = np.load(os.path.join(args.processed_path, args.data_list, 'p2_input_feat.npy'), allow_pickle=True).item()
 
-p1_forward = torch.from_numpy(p1_feat).to(args.device)
-p1_forward = torch.from_numpy(p2_feat).to(args.device)
-p1_reverse = flip_feature(p1_feat)
-p2_reverse = flip_feature(p2_feat)
+p1_feat = np.concatenate([p1_feat['input_feature'], 
+                          np.expand_dims(p1_feat['rho'], 2), 
+                          np.expand_dims(p1_feat['theta'], 2)], axis=2)
+p1_feat[np.isnan(p1_feat)] = 0
+
+p2_feat = np.concatenate([p2_feat['input_feature'], 
+                          np.expand_dims(p2_feat['rho'], 2), 
+                          np.expand_dims(p2_feat['theta'], 2)], axis=2)
+p2_feat[np.isnan(p2_feat)] = 0
+
+
+p1_forward = torch.from_numpy(p1_feat).to(args.device).to(torch.float32)
+p2_forward = torch.from_numpy(p2_feat).to(args.device).to(torch.float32)
+p1_reverse = flip_feature(p1_feat).to(torch.float32)
+p2_reverse = flip_feature(p2_feat).to(torch.float32)
 
 # essential part for training
 model = MaSIFSearch(args).to(args.device)
+model.load_state_dict(torch.load(args.cache_model))
+
+descriptors = []
+model.eval()
+with torch.no_grad():
+    for feat in [p1_forward, p2_forward, p1_reverse, p2_reverse]:
+        desc = model((feat, feat, feat))[0].detach().cpu().numpy()
+        descriptors.append(desc)
+
+# save to folder
+np.save(os.path.join(args.processed_path, args.data_list, 'p1_forward.npy'), descriptors[0])
+np.save(os.path.join(args.processed_path, args.data_list, 'p2_forward.npy'), descriptors[1])
+np.save(os.path.join(args.processed_path, args.data_list, 'p1_reverse.npy'), descriptors[2])
+np.save(os.path.join(args.processed_path, args.data_list, 'p2_reverse.npy'), descriptors[3])
+
+

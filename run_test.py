@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-@File   :  inference.py
-@Time   :  2023/12/15 14:09
+@File   :  run_test.py
+@Time   :  2023/12/22 23:01
 @Author :  Yufan Liu
-@Desc   :  Generate features for protein surface of a given PDB file, a script.
+@Desc   :  Run test set
 '''
+
 
 
 from arguments import parser
@@ -46,39 +47,24 @@ def compute_roc_auc(pos, neg):
     pos = pos.detach().cpu().numpy()
     neg = neg.detach().cpu().numpy()
 
-    pos_dist = np.save("./expers/pos_dist.npy", pos)
-    neg_dist = np.save("./expers/neg_dist.npy", neg)
+    pos_dist = np.save("./results/masif_pos_dist.npy", pos)
+    neg_dist = np.save("./results/masif_neg_dist.npy", neg)
 
 
     labels = np.concatenate([np.ones((len(pos))), np.zeros((len(neg)))])
     dist_pairs = np.concatenate([pos, neg])
     return roc_auc_score(labels, dist_pairs)   
 
+prepare = DataPrepare(args
+                      )
 
-training_list = open("data/list/train_update.txt").readlines()
-training_list = [x.strip() for x in training_list]
-
-testing_list = open("data/list/test_update.txt").readlines()
-testing_list = [x.strip() for x in testing_list]
-
-prepare = DataPrepare(args, 
-                      training_list=training_list, 
-                      testing_list=testing_list)
-
-# dataset
-train_set = prepare.dataset(data_type='train',
-                            batch_size=args.batch_size,
-                            pair_shuffle=args.pair_shuffle)
-val_set = prepare.dataset(data_type='val',
-                            batch_size=args.batch_size,
-                            pair_shuffle=args.pair_shuffle)
 test_set = prepare.dataset(data_type='test',
                             batch_size=args.batch_size,
                             pair_shuffle=args.pair_shuffle)
 
 # essential part for training
 model = MaSIFSearch(args).to('cuda')
-model.load_state_dict(torch.load("experiments/masif_logp/12-20-10-12/model.pth"))
+model.load_state_dict(torch.load("experiments/masif_logp/12-21-16-35/model.pth"))
 
 model.eval()
 with torch.no_grad():

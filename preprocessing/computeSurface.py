@@ -98,12 +98,15 @@ def protonate(args, infilename, outfilename):
     # Remove protons first, in case the structure is already protonated
     # download pdb first
     if not os.path.exists(infilename):
+        print(infilename)
         pdb = infilename.split("/")[-1].split(".")[0]  # ABCD
         dir = ''.join(infilename.split("/")[:-1])
         print(f"PDB file {pdb} do not exit")
         pdbl = biopdb.PDBList()
-        pdbl.retrieve_pdb_file(pdb, pdir=dir)
-        print(f"PDB file {pdb} do not exit")
+        pdbl.retrieve_pdb_file(pdb, pdir=dir, file_format='pdb')
+        # rename to pdb file
+        downloaded = os.path.join(dir, 'pdb' + pdb.lower() + '.ent')
+        os.rename(downloaded, os.path.join(dir, pdb.upper() + '.pdb'))
         assert os.path.exists(infilename) == True
         print("Successfully downloaded from PDB.")
 

@@ -22,4 +22,6 @@ make_data.py
 /experiments
 /data_prepare_logs
 /expers
-/
+/results
+/single_aa
+/.vscode
