@@ -16,8 +16,8 @@ def generate_hydrophabicity(args, infilename, names):
     # split PDB file
     #hydro = np.zeros(len(names))  # just a length, no matter who is passed
     parser = biopdb.PDBParser(QUIET=True)
-    strtucture = parser.get_structure(infilename, infilename)
-    residues = biopdb.Selection.unfold_entities(strtucture, 'R')
+    structure = parser.get_structure(infilename, infilename)
+    residues = biopdb.Selection.unfold_entities(structure, 'R')
     hydro = dict()
     for residue in residues:
         
@@ -26,7 +26,7 @@ def generate_hydrophabicity(args, infilename, names):
             res_id = (' ', res_id[1], res_id[2])
         io = biopdb.PDBIO()
         io.set_structure(residue)
-        tmp = ''.join(infilename.split('.')[:-1]) + '.tmp.' + str(res_id)
+        tmp = ''.join(infilename.split('.')[:-1]) + '.tmpmol' + str(res_id)
         io.save(tmp)
         mol = Chem.rdmolfiles.MolFromPDBFile(tmp)
         logp_mol = AllChem.CalcCrippenDescriptors(mol)[0]  

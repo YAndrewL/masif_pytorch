@@ -90,7 +90,7 @@ def read_msms(file_root):
 
 
 
-def protonate(args, infilename, outfilename):
+def protonate(args, infilename, outfilename, suffix='pdb'):
     # protonate (i.e., add hydrogens) a pdb using reduce and save to an output file.
     # in_pdb_file: file to protonate.
     # out_pdb_file: output file where to save the protonated pdb file. 
@@ -145,10 +145,14 @@ class NotDisordered(biopdb.Select):
         return not atom.is_disordered() or atom.get_altloc() == "A"  or atom.get_altloc() == "1" 
     
 def extractPDB(
-    infilename, outfilename, chain_ids=None 
+    infilename, outfilename, chain_ids=None, format='pdb' 
 ):
-    # extract the chain_ids from infilename and save in outfilename. 
-    parser = biopdb.PDBParser(QUIET=True)
+    # extract the chain_ids from infilename and save in outfilename.
+    assert format in ['pdb', 'cif'], "Structure file format not supported."
+    if format == 'pdb': 
+        parser = biopdb.PDBParser(QUIET=True)
+    elif format == 'cif':
+        parser = biopdb.MMCIFParser(QUIET=True)
     struct = parser.get_structure(infilename, infilename)
     model = biopdb.Selection.unfold_entities(struct, "M")[0]
     chains = biopdb.Selection.unfold_entities(struct, "C")
