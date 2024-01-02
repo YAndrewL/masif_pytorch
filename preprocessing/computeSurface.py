@@ -100,7 +100,7 @@ def protonate(args, infilename, outfilename):
     if not os.path.exists(infilename):
         print(infilename)
         pdb = infilename.split("/")[-1].split(".")[0]  # ABCD
-        dir = ''.join(infilename.split("/")[:-1])
+        dir = '/'.join(infilename.split("/")[:-1])
         print(f"PDB file {pdb} do not exit")
         pdbl = biopdb.PDBList()
         pdbl.retrieve_pdb_file(pdb, pdir=dir, file_format='pdb')
