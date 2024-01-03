@@ -6,6 +6,9 @@
 @Desc   :  Some helper functions for experiments
 '''
 
+import os
+import shutil
+
 def add_chain_id_to_pdb(file_path, save_path, chain_id):
     with open(file_path, 'r') as file:
         lines = file.readlines()
@@ -36,3 +39,18 @@ def merge_pdb_file(file_a, file_b, output_file):
                 outfile.write(line)
         outfile.write("END\n")
 
+def remove_incompelete_folders(processed_path):
+    check = sorted(
+        ['preprocess.log',
+         'p1_input_feat.npy',
+         'p2_input_feat.npy',
+         'p2.ply',
+         'p1.pdb',
+         'p2.pdb',
+         'p1.ply',
+         'raw.pdb']
+        )
+    for data in os.listdir(processed_path):
+        if sorted(os.listdir(os.path.join(processed_path, data))) != check:
+            shutil.rmtree(os.path.join(processed_path, data))
+            print(f"Delete incomplete folder {data}, due to APBS computing issue.")

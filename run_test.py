@@ -6,8 +6,7 @@
 @Desc   :  Run test set
 '''
 
-
-
+import os
 from arguments import parser
 from data_prepare import DataPrepare
 from trainer import Trainer
@@ -17,6 +16,7 @@ import random
 import numpy as np
 from tqdm import tqdm
 from sklearn.metrics import roc_auc_score
+from preprocessing.cacheSample import generate_data_cache
 
 args = parser.parse_args()
 
@@ -55,8 +55,12 @@ def compute_roc_auc(pos, neg):
     dist_pairs = np.concatenate([pos, neg])
     return roc_auc_score(labels, dist_pairs)   
 
-prepare = DataPrepare(args
-                      )
+# cache as training
+# all list
+test_list = [x.strip() for x in os.listdir("./peptide_data/processed")]
+#generate_data_cache(args, './peptide_dataset/test', test_list)
+
+prepare = DataPrepare(args)
 
 test_set = prepare.dataset(data_type='test',
                             batch_size=args.batch_size,
@@ -79,4 +83,5 @@ with torch.no_grad():
     neg = torch.cat([d[1] for d in score])
 
     roc = 1 - compute_roc_auc(pos, neg)
+    print(f"AUC-ROC is {roc}")
 

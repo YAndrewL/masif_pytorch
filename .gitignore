@@ -27,3 +27,4 @@ make_data.py
 /.vscode
 /analysis
 /peptide_data
+/peptide_dataset
