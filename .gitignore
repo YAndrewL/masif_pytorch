@@ -7,7 +7,6 @@ make_data.py
 **/*.log
 **/*.npy
 **/*.ipynb
-**/*.sh
 /exelogs
 /dataset/train
 /dataset/val
@@ -28,3 +27,4 @@ make_data.py
 /analysis
 /peptide_data
 /peptide_dataset
+/peptide_library

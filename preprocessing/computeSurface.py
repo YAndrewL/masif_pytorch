@@ -151,7 +151,7 @@ def extractPDB(
     assert format in ['pdb', 'cif'], "Structure file format not supported."
     if format == 'pdb': 
         parser = biopdb.PDBParser(QUIET=True)
-    elif format == 'cif':
+    elif format == 'cif':  # tmp
         parser = biopdb.MMCIFParser(QUIET=True)
     struct = parser.get_structure(infilename, infilename)
     model = biopdb.Selection.unfold_entities(struct, "M")[0]

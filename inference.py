@@ -3,7 +3,7 @@
 @File   :  inference.py
 @Time   :  2023/12/21 14:18
 @Author :  Yufan Liu
-@Desc   :  Process from a PDB file and generate descriptor using trained model
+@Desc   :  Process from a PDB file and generate descriptor using trained model, for paired data.
 '''
 
 # DO NOT add an inference module in main.py, will make you crazy!
