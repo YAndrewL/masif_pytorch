@@ -194,7 +194,6 @@ def generate_surface(args, infilename, outfilename, cache=True):
     # pymol to generate xyzr, and MSMS to generate vertex files
     generate_xyzr(infilename, outfilename)
     file_base = ''.join(infilename.split('.')[:-1])
-
     msms_arg = [args.MSMS_BIN, "-density", "3.0", "-hdensity", "3.0", "-probe",\
                     "1.5", "-if",outfilename,"-of",file_base, "-af", file_base]
     #print msms_bin+" "+`args`

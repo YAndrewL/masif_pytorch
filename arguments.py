@@ -117,7 +117,10 @@ parser.add_argument("--dataset_cache",
                     type=bool,
                     default=False,
                     help="tmp used for dataset caching")
-
+parser.add_argument("--process_single",
+                    type=bool,
+                    default=False,
+                    help="tmp used for only process a single chain")
 
 # model settings
 parser.add_argument("--model_path",  # this is actually experiment recording path!

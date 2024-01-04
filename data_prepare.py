@@ -220,3 +220,57 @@ class DataPrepare(object):
                           shuffle=shuffle,
                           num_workers=self.args.num_workers)
         return dset
+    
+##############################-----------##############################
+
+def process_single(args, pdb_id, raw_path, processed_path):
+    """
+        Process a single pdb into features.
+        Input: .pdb file
+        Output: .npy feature file
+    """
+    # path, pdbid
+    raw_pdb = pjoin(raw_path, pdb_id)
+    processed_pdb = pjoin(processed_path, pdb_id)
+    surface_xyzrn = ''.join(processed_pdb.split('.')[:-1]) + '.xyzrn'
+
+    protonate(args, raw_pdb, processed_pdb)
+    vertices, faces, normals, names, areas = generate_surface(args, processed_pdb, surface_xyzrn, cache=False)
+    
+    charge = generate_charge(processed_pdb, vertices, names)
+
+    logp = generate_hydrophabicity(args, processed_pdb, names)
+
+    mesh = GeoMesh(vertex_matrix=vertices, face_matrix=faces, charge=charge, logp=logp)
+    face_number = mesh.current_mesh().face_number()
+    mesh.meshing_decimation_quadric_edge_collapse(targetfacenum=int(args.collapse_rate * face_number))
+    mesh.meshing_repair_non_manifold_edges()  # remove edges
+    mesh.meshing_remove_unreferenced_vertices() 
+    mesh.apply_coord_taubin_smoothing()
+
+    mesh.update_feature()
+
+    apbs = generate_apbs(args, processed_pdb, mesh.current_mesh().vertex_matrix())
+
+    mesh.set_attribute('apbs', apbs)
+    
+
+    rho, theta, neighbor_id, neighbor_mask = generate_polar_coords(args, mesh)
+    mesh.set_attribute('rho', rho)
+    mesh.set_attribute('theta', theta)
+    mesh.set_attribute('neighbor_id', neighbor_id)
+    mesh.set_attribute('neighbor_mask', neighbor_mask)
+    
+    mesh = generate_shapeindex(mesh)
+    mesh = generate_ddc(args, mesh)
+    mesh.normalize_features()
+    #mesh.save_feature(pjoin(args.processed_path, data, f'p{num}_input_feat.npy'))
+    #mesh.save_current_mesh(pjoin(args.processed_path, data, f'p{num}.ply'), binary=False, save_vertex_color=False)
+    assert mesh.feat_norm_flag == True
+
+    # ignore previous mesh
+    # define positive, negatives
+    save_name = ''.join(processed_pdb.split('.')[:-1]) + '_input_feat.npy'
+
+    mesh.save_feature(save_name)
+    os.remove(processed_pdb)

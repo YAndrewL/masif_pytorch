@@ -3,7 +3,7 @@
 @File   :  run_test.py
 @Time   :  2023/12/22 23:01
 @Author :  Yufan Liu
-@Desc   :  Run test set
+@Desc   :  Run test set for performance evaluation
 '''
 
 import os
