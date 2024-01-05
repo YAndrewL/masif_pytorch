@@ -211,6 +211,12 @@ class MaSIFSearch(nn.Module):
         self.fcc = nn.Linear(self.n_thetas * self.n_rhos * self.n_features,
                              self.n_thetas * self.n_rhos)
         self.relu = nn.ReLU()
+        self.chemical_net = nn.Sequential(  # from 2 features to 6 features
+            nn.Linear(2, 6),
+            nn.ReLU(),
+            nn.Linear(6, 6)
+        )
+
 
     def forward(self, batch):
         desc = []

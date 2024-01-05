@@ -162,6 +162,10 @@ parser.add_argument("--feature_mask",
                     nargs='+',
                     default=[1, 1, 1, 1, 1],
                     help="mask features for ablation")
+parser.add_argument("--chemical_net",
+                    type=bool,
+                    default=True,
+                    help="Use a linear net to model chemical features")
 
 # initialization model
 parser.add_argument("--n_thetas",
