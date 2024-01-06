@@ -211,10 +211,11 @@ class MaSIFSearch(nn.Module):
         self.fcc = nn.Linear(self.n_thetas * self.n_rhos * self.n_features,
                              self.n_thetas * self.n_rhos)
         self.relu = nn.ReLU()
-        self.chemical_net = nn.Sequential(  # from 2 features to 6 features
-            nn.Linear(2, 6),
+        self.chemical_net = nn.Sequential(  # from 2 features to 5 features
+            nn.Linear(2, 5),
             nn.ReLU(),
-            nn.Linear(6, 6)
+            nn.Linear(5, 5),
+            nn.LayerNorm(5)
         )
 
 
@@ -225,11 +226,15 @@ class MaSIFSearch(nn.Module):
             feature = data[:, :, :5].clone()
             
             # mask features
+            if self.args.chemical_net:
+                self.args.feature_mask = [1, 1, 0, 0, 0]
             feat = []
             for i, m in enumerate(self.args.feature_mask):
                 if m == 1:
                     feat.append(feature[:, :, i])
-            feat = torch.stack(feat, dim=-1)
+            feat = torch.stack(feat, dim=-1)  # [Batch, 100 ,2]
+            feat = self.chemical_net(feat)  # [Batch, 100 ,5]
+            feat = self.normalize(feat)
             rho = data[:, :, 5:6].clone()
             theta = data[:,:,6:7].clone()
             out = self.gauss_conv(feature=feat, rhos=rho, thetas=theta)
@@ -238,7 +243,10 @@ class MaSIFSearch(nn.Module):
             desc.append(out)
         return desc
 
-        
+    def normalize(self, tensor):
+        t_min = torch.min(tensor)
+        t_max = torch.max(tensor)
+        return 2 * ((tensor - t_min) / (t_max - t_min)) - 1
 
 
 

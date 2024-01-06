@@ -28,10 +28,10 @@ if args.prepare_data:
     prepare.preprocess()
     exit(0)
 
-training_list = open("data/list/train_update.txt").readlines()
+training_list = open("data/benchmark/benchmark_data/list/train_update.txt").readlines()
 training_list = [x.strip() for x in training_list]
 
-testing_list = open("data/list/test_update.txt").readlines()
+testing_list = open("data/benchmark/benchmark_data/list/test_update.txt").readlines()
 testing_list = [x.strip() for x in testing_list]
 
 # check whether to cache new data.

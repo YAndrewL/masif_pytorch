@@ -12,16 +12,16 @@ parser = argparse.ArgumentParser()
 # data set paths
 parser.add_argument("--data_path", 
                     type=str, 
-                    default="data")
+                    default="data/benchmark/benchmark_data")
 parser.add_argument('--raw_path', 
                     type=str, 
-                    default="data/raw_pdbs")
+                    default="data/benchmark/benchmark_data/raw_pdbs")
 parser.add_argument('--processed_path', 
                     type=str, 
-                    default="data/processed")
+                    default="data/benchmark/benchmark_data/processed")
 parser.add_argument('--dataset_path', 
                     type=str, 
-                    default="benchmark_dataset",
+                    default="data/benchmark/benchmark_dataset",
                     help="Set this name to xx_dataset for easily check")
 parser.add_argument("--residue_lib",
                     type=str,
