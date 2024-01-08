@@ -14,6 +14,7 @@ make_data.py
 /train_tmp_log
 /model
 /dcgm
+/logs
 /benchmark_dataset
 /ligand
 /masif_dataset
@@ -28,3 +29,4 @@ make_data.py
 /peptide_data
 /peptide_dataset
 /peptide_library
+/masif_raw_cache

@@ -212,11 +212,14 @@ class MaSIFSearch(nn.Module):
                              self.n_thetas * self.n_rhos)
         self.relu = nn.ReLU()
         self.chemical_net = nn.Sequential(  # from 2 features to 5 features
-            nn.Linear(2, 5),
+            nn.Linear(3, 15),
             nn.ReLU(),
-            nn.Linear(5, 5),
+            nn.Linear(15, 15),
+            nn.ReLU(),
+            nn.Linear(15, 5),
             nn.LayerNorm(5)
         )
+        self.atomtype_embedding = nn.Embedding(6, 1)
 
 
     def forward(self, batch):
@@ -227,13 +230,15 @@ class MaSIFSearch(nn.Module):
             
             # mask features
             if self.args.chemical_net:
-                self.args.feature_mask = [1, 1, 0, 0, 0]
+                self.args.feature_mask = [1, 1, 1, 0, 0]
             feat = []
             for i, m in enumerate(self.args.feature_mask):
                 if m == 1:
                     feat.append(feature[:, :, i])
-            feat = torch.stack(feat, dim=-1)  # [Batch, 100 ,2]
-            feat = self.chemical_net(feat)  # [Batch, 100 ,5]
+                if i == 2:
+                    feat.append(self.atomtype_embedding(feature[:, :, i].long().squeeze(-1)))
+            feat = torch.stack(feat, dim=-1)  # [Batch, V ,3]
+            feat = self.chemical_net(feat)  # [Batch, V ,5]
             feat = self.normalize(feat)
             rho = data[:, :, 5:6].clone()
             theta = data[:,:,6:7].clone()

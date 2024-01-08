@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+'''
+@File   :  pdb_download.py
+@Time   :  2024/01/08 13:56
+@Author :  Yufan Liu
+@Desc   :  Download PDB file.
+'''
+
 import os
 import sys
 import Bio.PDB as biopdb

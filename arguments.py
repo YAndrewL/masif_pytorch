@@ -122,6 +122,19 @@ parser.add_argument("--process_single",
                     default=False,
                     help="tmp used for only process a single chain")
 
+# setting data list for cache
+parser.add_argument("--training_list",
+                    type=str,
+                    default=None,
+                    help="A list for cache dataset.")
+# like : data/benchmark/benchmark_data/list/train_update.txt
+parser.add_argument("--testing_list",
+                    type=str,
+                    default=None,
+                    help="A list for cache dataset.")
+
+
+
 # model settings
 parser.add_argument("--model_path",  # this is actually experiment recording path!
                     type=str,

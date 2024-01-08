@@ -21,25 +21,27 @@ random.seed(args.random_seed)
 np.random.seed(args.random_seed)
 
 # prepare data
-# note: execute prepare.preprocess in advance due to speed issue
+# note: execute prepare.preprocess in advance (for the first time) due to speed issue
 
 if args.prepare_data:
     prepare = DataPrepare(args, data_list=[args.data_list])  # pass a single PDB each time
     prepare.preprocess()
+    print("Process Done, exit. Please re-run this file with other flags.")
     exit(0)
 
-training_list = open("data/benchmark/benchmark_data/list/train_update.txt").readlines()
-training_list = [x.strip() for x in training_list]
-
-testing_list = open("data/benchmark/benchmark_data/list/test_update.txt").readlines()
-testing_list = [x.strip() for x in testing_list]
-
-# check whether to cache new data.
-prepare = DataPrepare(args, 
-                training_list=training_list, 
-                testing_list=testing_list)
 
 if args.dataset_cache:
+    training_list = open(args.training_list).readlines()
+    training_list = [x.strip() for x in training_list]
+
+    testing_list = open(args.testing_list).readlines()
+    testing_list = [x.strip() for x in testing_list]
+
+    # check whether to cache new data.
+    prepare = DataPrepare(args, 
+                    training_list=training_list, 
+                    testing_list=testing_list)
+
     if os.listdir(args.dataset_path):
         if not args.dataset_override:
             raise RuntimeError(f"{args.data_path} is not empty, please clear the contents, or override it by setting --dataset_override to True")
@@ -47,6 +49,10 @@ if args.dataset_cache:
             prepare.cache()
     else:
         prepare.cache()
+
+else:
+    prepare = DataPrepare(args)
+
 
 # dataset
 train_set = prepare.dataset(data_type='train',
