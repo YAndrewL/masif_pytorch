@@ -96,9 +96,14 @@ def collate_fn(flip=True):
                     # theta
                     feat = 2 * pi - binder[:, :, i]
                     b_feat.append(feat.unsqueeze(-1))
+                elif i == 2:
+                    # lyf hack for chemical net, feature 2 is now atom type.
+                    feat = binder[:, :, i]
+                    b_feat.append(feat.unsqueeze(-1))
                 else:
                     feat = -binder[:, :, i]
                     b_feat.append(feat.unsqueeze(-1))
+                    
         binder = torch.cat(b_feat, dim=-1)
         return binder, pos, neg
     return collate

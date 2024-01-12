@@ -212,19 +212,22 @@ class MaSIFSearch(nn.Module):
                              self.n_thetas * self.n_rhos)
         self.relu = nn.ReLU()
         self.chemical_net = nn.Sequential(  # from 2 features to 5 features
-            nn.Linear(3, 15),
+            nn.Linear(1, 3),
             nn.ReLU(),
-            nn.Linear(15, 15),
+            nn.Linear(3, 16),
             nn.ReLU(),
-            nn.Linear(15, 5),
-            nn.LayerNorm(5)
+            nn.Linear(16, 8),
+            nn.ReLU(),
+            nn.Linear(8, 3),
+            #nn.LayerNorm(3)
         )
         self.atomtype_embedding = nn.Embedding(6, 1)
 
 
     def forward(self, batch):
         desc = []
-        for data in batch:
+        for tag, data in enumerate(batch):
+            # lyf here flip the chemical net feature for binder, 1.11
             data = data.to(self.args.device)
             feature = data[:, :, :5].clone()
             
@@ -234,12 +237,22 @@ class MaSIFSearch(nn.Module):
             feat = []
             for i, m in enumerate(self.args.feature_mask):
                 if m == 1:
-                    feat.append(feature[:, :, i])
-                if i == 2:
-                    feat.append(self.atomtype_embedding(feature[:, :, i].long().squeeze(-1)))
+                    if i == 2:
+                        add_feature = feature[:, :, i].long()
+                        embed = self.atomtype_embedding(add_feature)
+                        out = self.chemical_net(embed)
+                        out = self.normalize(out)
+                        if tag == 0:
+                            out = -out
+                        for k in range(3):  # todo move this fixed number
+                            feat.append(out[:, :, k])
+                    else:
+                        feat.append(feature[:, :, i])
+            
             feat = torch.stack(feat, dim=-1)  # [Batch, V ,3]
-            feat = self.chemical_net(feat)  # [Batch, V ,5]
-            feat = self.normalize(feat)
+            #feat = self.chemical_net(feat)  # [Batch, V ,5]
+            #feat = self.normalize(feat)
+            # print(feat.shape)
             rho = data[:, :, 5:6].clone()
             theta = data[:,:,6:7].clone()
             out = self.gauss_conv(feature=feat, rhos=rho, thetas=theta)

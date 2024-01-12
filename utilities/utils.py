@@ -99,8 +99,68 @@ def find_patch(target, cloud, cutoff=12):
 
 def color_ply(infile, outfile, color_id, mode='single'):
     """
-    Add color to selected 
+    Add color to selected indices
+    color_id should be a list or ndarray in int.
     """
+    # todo set mode to a gradient color scale
+    import pymeshlab
+    import numpy as np
+
+    mesh = pymeshlab.MeshSet()
+    mesh.load_new_mesh(infile)
+    
+    vertex = mesh.current_mesh().vertex_matrix()
+    color = np.full_like(vertex, 255)  # all in white
+    #print(color.shape)
+    for i in range(len(vertex)):
+        if i in color_id:
+            color[i, :] = [255, 0, 0]
+    
+    # manually write in ply, only support pure xyz ply file.
+    counter = 0
+    with open(outfile, 'w') as f:
+        for line in open(infile).readlines():
+            if line.startswith("element vertex"):
+                vertex_number = line.strip().split(" ")[-1]
+            if line.startswith("element face"):
+                face_number = line.strip().split(" ")[-1]            
+                break
+        
+        # write header
+        f.write("ply\n")
+        f.write("format ascii 1.0\n")
+        f.write("comment VCGLIB generated\n")
+        f.write(f"element vertex {vertex_number}\n")
+        f.write("property double x\n")
+        f.write("property double y\n")
+        f.write("property double z\n")
+        f.write("property uchar red\n")
+        f.write("property uchar green\n")
+        f.write("property uchar blue\n")
+        f.write(f"element face {face_number}\n")
+        f.write("property list uchar int vertex_indices\n")
+        f.write("end_header\n")
+
+        for i, line in enumerate(open(infile).readlines()):
+            line = line.strip()
+            if not line[0].isdigit():
+                continue
+            if line[0].isdigit() and counter <= len(color) - 1:
+                f.write(line + ' ')
+                fillin = color[counter]
+                f.write(str(int(fillin[0])) + ' ')
+                f.write(str(int(fillin[1])) + ' ')
+                f.write(str(int(fillin[2])) + '\n')
+                counter += 1
+            else:
+                f.write(line + '\n')
+
+
+
+
+
+
+
 
 
 
