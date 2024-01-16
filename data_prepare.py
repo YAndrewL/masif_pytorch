@@ -214,7 +214,8 @@ class DataPrepare(object):
                               pair_shuffle=pair_shuffle)
         if data_type == 'train':
             shuffle = True
-        else: shuffle = False
+        else: 
+            shuffle = False
         dset = DataLoader(data, batch_size=batch_size, 
                           collate_fn=collate_fn(), 
                           shuffle=shuffle,

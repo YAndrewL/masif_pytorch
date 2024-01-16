@@ -31,27 +31,30 @@ class Trainer(object):
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), 
                                           lr=args.learning_rate)
-        self.train_set, self.val_set, self.test_set = datasets
+        self.train_set, self.val_set, self.test_set = datasets     
         timestamp = datetime.datetime.now().strftime("%m-%d-%H-%M")
         self.model_path = os.path.join(args.model_path, args.experiment_name, timestamp)
-        if not os.path.exists(self.model_path):
-            os.makedirs(self.model_path, exist_ok=True)
-
-        self.logger = logger.add(os.path.join(self.model_path, 'logger.log'))
-        self.savefile = os.path.join(self.model_path, 'model.pth')
         
-        # save config
-        config_file = os.path.join(self.model_path, 'config.yaml')
-        self.config_save(config_file)
+        if args.mode == 'train':
+            if not os.path.exists(self.model_path):
+                os.makedirs(self.model_path, exist_ok=True)
 
+            self.logger = logger.add(os.path.join(self.model_path, 'logger.log'))
+            self.savefile = os.path.join(self.model_path, 'model.pth')
+            
+            # save config
+            config_file = os.path.join(self.model_path, 'config.yaml')
+            self.config_save(config_file)
+
+
+            # parameters
+            for name, params in self.model.named_parameters():
+                logger.info(f"Trainable parameters in model: {name}")
+            n_params = sum(p.numel() for p in self.model.parameters())
+            logger.info(f"Amount of trainable parameters : {n_params}")
+        
         self.relu = nn.ReLU()
-
-        # parameters
-        for name, params in self.model.named_parameters():
-            logger.info(f"Trainable parameters in model: {name}")
-        n_params = sum(p.numel() for p in self.model.parameters())
-        logger.info(f"Amount of trainable parameters : {n_params}")
-
+        
 
     def train(self):
         #torch.autograd.set_detect_anomaly(True)
@@ -96,19 +99,19 @@ class Trainer(object):
             roc = 1 - self.compute_roc_auc(pos, neg)
 
             logger.info(f"Epoch {epoch} / {self.epochs}, Training loss: {torch.mean(torch.stack(t_loss)).item():.6f}")
-            logger.info(f"Training AUR-ROC: {roc.item():.6f}")
+            logger.info(f"Training AUC-ROC: {roc.item():.6f}")
 
 
-            if epoch % self.args.test_epochs == 0:
+            if epoch == 0  or epoch % self.args.test_epochs == 0:
                 logger.warning(f"Iteration reached, validate and test!")
                 
                 # validtion
-                loss = []
-                score = []
                 self.model.eval()
                 with torch.no_grad():
+                    
+                    loss = []
+                    score = []
                     for data in tqdm(self.val_set):
-
                         outputs = self.model(data)
                         loss_, score_ = self.compute_loss(outputs)
                         loss.append(loss_)
@@ -120,13 +123,13 @@ class Trainer(object):
                     
                     roc = 1 - self.compute_roc_auc(pos, neg)
                     logger.info(f"Validating loss: {loss.item():.6f}")
-                    logger.info(f"Validating AUR-ROC: {roc.item():.6f}")
+                    logger.info(f"Validating AUC-ROC: {roc.item():.6f}")
 
                     # for name, params in self.model.named_parameters():
                     #     if 'b_conv' in name:
                     #         print(params)
 
-                    if roc.item() > best_val_auc:
+                    if roc.item() > best_val_auc:                        
                         torch.save(self.model.state_dict(),
                                 self.savefile)
                         best_val_auc = roc.item()
@@ -146,7 +149,7 @@ class Trainer(object):
 
                     roc = 1 - self.compute_roc_auc(pos, neg)
                     logger.info(f"testing loss: {loss.item():.6f}")
-                    logger.info(f"testing AUR-ROC: {roc.item():.6f}")
+                    logger.info(f"testing AUC-ROC: {roc.item():.6f}")
 
     def compute_roc_auc(self, pos, neg):
         pos = pos.detach().cpu().numpy()
@@ -181,3 +184,23 @@ class Trainer(object):
         assert saver.split('.')[-1] == 'yaml'
         with open(saver, 'w') as file:
             yaml.dump(save_dict, file)
+            
+            
+    def test(self):
+        self.model.eval()
+        with torch.no_grad():
+            loss = []
+            score = []
+            for data in tqdm(self.test_set):
+                outputs = self.model(data)
+                loss_, score_ = self.compute_loss(outputs)
+                loss.append(loss_)
+                score.append(score_)
+            loss = torch.mean(torch.stack(loss))
+            # score: [(pos:, neg), ...]
+            pos = torch.cat([d[0] for d in score])  # [N-sample,]
+            neg = torch.cat([d[1] for d in score])
+            
+            roc = 1 - self.compute_roc_auc(pos, neg)
+            print(f"Testing loss: {loss.item():.6f}")
+            print(f"Testing AUC-ROC: {roc.item():.6f}")

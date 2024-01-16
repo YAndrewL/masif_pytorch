@@ -17,6 +17,8 @@ import os
 args = parser.parse_args()
 
 torch.manual_seed(args.random_seed)
+if args.device != 'cpu':
+    torch.cuda.manual_seed(args.random_seed)
 random.seed(args.random_seed)
 np.random.seed(args.random_seed)
 
@@ -24,6 +26,7 @@ np.random.seed(args.random_seed)
 # note: execute prepare.preprocess in advance (for the first time) due to speed issue
 
 if args.prepare_data:
+    print("Data prepare mode, no model will be trained.")
     prepare = DataPrepare(args, data_list=[args.data_list])  # pass a single PDB each time
     prepare.preprocess()
     print("Process Done, exit. Please re-run this file with other flags.")
@@ -44,7 +47,7 @@ if args.dataset_cache:
 
     if os.listdir(args.dataset_path):
         if not args.dataset_override:
-            raise RuntimeError(f"{args.data_path} is not empty, please clear the contents, or override it by setting --dataset_override to True")
+            raise RuntimeError(f"{args.data_path} is not empty, please clear the contents, or override it by setting --dataset_override")
         else: 
             prepare.cache()
     else:
@@ -65,10 +68,33 @@ test_set = prepare.dataset(data_type='test',
                             batch_size=args.batch_size,
                             pair_shuffle=args.pair_shuffle)
 
-# essential part for training
-model = MaSIFSearch(args)
 
-trainer = Trainer(args=args, 
-                  model=model,
-                  datasets=[train_set, val_set, test_set])
-trainer.train()
+# essential part for training
+if args.mode == 'train':
+    model = MaSIFSearch(args)
+
+    if args.cache_model:
+        print(f"cache model specified in training mode, will fine tune based on this model {args.cache_model}.")
+        model.load_state_dict(torch.load(args.cache_model))
+
+    trainer = Trainer(args=args, 
+                    model=model,
+                    datasets=[train_set, val_set, test_set])
+    trainer.train()
+    
+elif args.mode == 'test':
+    model = MaSIFSearch(args)
+
+    trainer = Trainer(args=args, 
+                    model=model,
+                    datasets=[train_set, val_set, test_set])
+    try:
+        model.load_state_dict(torch.load(args.cache_model))
+    except Exception as e:
+        print(e)
+        raise RuntimeError("Model path not (corretly) specified.")
+        
+    trainer.test()
+
+else:
+    raise KeyError("Running mode not supported.")

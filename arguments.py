@@ -110,8 +110,7 @@ parser.add_argument("--prepare_data",
                     default=False,
                     help="tmp used for data prepare in cluster nodes")
 parser.add_argument("--dataset_override",
-                    type=bool,
-                    default=False,
+                    action='store_false',
                     help="tmp used for data override")
 parser.add_argument("--dataset_cache",
                     type=bool,
@@ -145,7 +144,7 @@ parser.add_argument("--learning_rate",
                     default=0.001)
 parser.add_argument("--epochs",
                     type=int,
-                    default=500)
+                    default=250)
 parser.add_argument("--test_epochs",
                     type=int,
                     default=5)
@@ -176,9 +175,17 @@ parser.add_argument("--feature_mask",
                     default=[1, 1, 1, 1, 1],
                     help="mask features for ablation")
 parser.add_argument("--chemical_net",
-                    type=bool,
-                    default=True,
+                    type=str,
+                    default="flip",
                     help="Use a linear net to model chemical features")
+parser.add_argument("--vocab_length",
+                    type=int,
+                    default=8,
+                    help="The length of vocabulary of atom type")
+
+
+
+
 
 # initialization model
 parser.add_argument("--n_thetas",
@@ -203,5 +210,9 @@ parser.add_argument("--n_features",
 parser.add_argument("--cache_model",
                     type=str,
                     default=None,
-                    help="model caching used for inference")   
+                    help="model caching used for inference")  
+parser.add_argument("--mode",
+                    type=str,
+                    default='train',
+                    help="training or inference")   
 

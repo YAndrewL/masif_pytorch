@@ -30,10 +30,14 @@ class SurfaceDataset(Dataset):
         self.pair_shuffle = pair_shuffle
 
     def __getitem__(self, index):
-        # shuffle list every time for positive and negative
-        if self.pair_shuffle:
-            pidx = random.randint(0, self.data_len - 1)
-            nidx = random.randint(0, self.data_len - 1)
+        # shuffle list every time for positive and negative in training
+        if self.dataset_type == 'train' or self.dataset_type == 'val':
+            if self.pair_shuffle:
+                pidx = random.randint(0, self.data_len - 1)
+                nidx = random.randint(0, self.data_len - 1)
+            else:
+                pidx = index
+                nidx = index
         else:
             pidx = index
             nidx = index
@@ -42,31 +46,12 @@ class SurfaceDataset(Dataset):
         binder = torch.from_numpy(self.binder[pidx]).unsqueeze(0).to(torch.float32)
         pos = torch.from_numpy(self.positive[pidx]).unsqueeze(0).to(torch.float32)
         neg = torch.from_numpy(self.negative[nidx]).unsqueeze(0).to(torch.float32)
-
+        
         return binder, pos, neg
     
     def __len__(self):
         return self.data_len
     
-class InferenceSet(Dataset):
-    """a simple implementation for inference
-    """
-    def __init__(self, file_path):
-        # file path should be in npy directly. 
-        super().__init__()
-        
-        self.data = np.load(file_path)
-        # should be ndarray with shape [N, vertex, 7]
-        self.data_len = self.data.shape[0]
-
-    def __getitem__(self, index):
-        data = torch.from_numpy(self.data[index]).unsqueeze(0)
-        # for consistent with surfacedata, easy to use collate function
-        return data, data, data  
-    
-    def __len__(self):
-        return self.data_len
-
 
 def collate_fn(flip=True):
     # wrapper

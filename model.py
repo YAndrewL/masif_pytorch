@@ -55,7 +55,7 @@ class GaussianFiler(nn.Module):
         self.mu_theta = []
         self.sigma_rho = []
         self.sigma_theta = []
-        # todo I dont know why initilized as this, since the set of parameters are trainable
+
         self.mu_rho = nn.ParameterList(
             [nn.Parameter(mu_rho_initial).to(self.device) for _ in range(self.n_features)]
             )  # 1, n_gauss
@@ -78,7 +78,7 @@ class GaussianFiler(nn.Module):
         self.W_conv = nn.ParameterList(
             [nn.init.xavier_normal_(wconv[i]) for i in range(self.n_features)]
             )
-
+        
 
     def compute_initial_coordinate(self):
         # initialize a polar mesh grid
@@ -211,8 +211,9 @@ class MaSIFSearch(nn.Module):
         self.fcc = nn.Linear(self.n_thetas * self.n_rhos * self.n_features,
                              self.n_thetas * self.n_rhos)
         self.relu = nn.ReLU()
+
         self.chemical_net = nn.Sequential(  # from 2 features to 5 features
-            nn.Linear(1, 3),
+            nn.Linear(2, 3),
             nn.ReLU(),
             nn.Linear(3, 16),
             nn.ReLU(),
@@ -220,11 +221,28 @@ class MaSIFSearch(nn.Module):
             nn.ReLU(),
             nn.Linear(8, 3),
             #nn.LayerNorm(3)
-        )
-        self.atomtype_embedding = nn.Embedding(6, 1)
+        )        
+        
+        if args.chemical_net == 'siamese':
+            self.chemical_net2 = nn.Sequential(  # from 2 features to 5 features
+                nn.Linear(2, 3),
+                nn.ReLU(),
+                nn.Linear(3, 16),
+                nn.ReLU(),
+                nn.Linear(16, 8),
+                nn.ReLU(),
+                nn.Linear(8, 3),
+                #nn.LayerNorm(3)
+            )        
+        
+        self.atomtype_embedding = nn.Embedding(args.vocab_length, 1)
 
 
     def forward(self, batch):
+        # lyf tmp code here
+        self.atomtype_embedding_larger = nn.Embedding(10, 1)
+        
+        
         desc = []
         for tag, data in enumerate(batch):
             # lyf here flip the chemical net feature for binder, 1.11
@@ -233,6 +251,7 @@ class MaSIFSearch(nn.Module):
             
             # mask features
             if self.args.chemical_net:
+                # todo remove this hack
                 self.args.feature_mask = [1, 1, 1, 0, 0]
             feat = []
             for i, m in enumerate(self.args.feature_mask):
@@ -240,19 +259,43 @@ class MaSIFSearch(nn.Module):
                     if i == 2:
                         add_feature = feature[:, :, i].long()
                         embed = self.atomtype_embedding(add_feature)
-                        out = self.chemical_net(embed)
-                        out = self.normalize(out)
-                        if tag == 0:
-                            out = -out
-                        for k in range(3):  # todo move this fixed number
-                            feat.append(out[:, :, k])
+                        dist_ = feature[:, :, i+2:i+3]
+                        embed = torch.cat((dist_, embed), dim=-1)
+
+                        # double network
+                        if self.args.chemical_net == 'siamese':
+                            if tag == 0:
+                                out = self.chemical_net(embed)
+                                out = self.normalize(out)
+                            else: 
+                                out = self.chemical_net2(embed)
+                                out = self.normalize(out)
+                            for k in range(3):
+                                feat.append(out[:, :, k])
+                        
+                        # flip features
+                        elif self.args.chemical_net == 'flip':
+                            out = self.chemical_net(embed)
+                            out = self.normalize(out)                        
+                            if tag == 0:  # binder
+                                for k in range(3):  # todo move this fixed number
+                                    if k == 1:  # the position of charge
+                                        feat.append(out[:, :, k])
+                                    else:
+                                        feat.append(-out[:, :, k])
+                            else:
+                                for k in range(3): 
+                                    feat.append(out[:, :, k])
+                        else:
+                            raise KeyError("Wrong network specified.")
+                    
                     else:
                         feat.append(feature[:, :, i])
             
             feat = torch.stack(feat, dim=-1)  # [Batch, V ,3]
             #feat = self.chemical_net(feat)  # [Batch, V ,5]
             #feat = self.normalize(feat)
-            # print(feat.shape)
+            #print(feat.shape)
             rho = data[:, :, 5:6].clone()
             theta = data[:,:,6:7].clone()
             out = self.gauss_conv(feature=feat, rhos=rho, thetas=theta)
@@ -265,11 +308,3 @@ class MaSIFSearch(nn.Module):
         t_min = torch.min(tensor)
         t_max = torch.max(tensor)
         return 2 * ((tensor - t_min) / (t_max - t_min)) - 1
-
-
-
-
-        
-
-
-

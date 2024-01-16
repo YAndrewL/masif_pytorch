@@ -23,6 +23,7 @@ args = parser.parse_args()
 torch.manual_seed(args.random_seed)
 random.seed(args.random_seed)
 np.random.seed(args.random_seed)
+torch.cuda.manual_seed(args.random_seed)
 
 # prepare data
 # note: execute prepare.preprocess in advance due to speed issue
@@ -47,28 +48,30 @@ def compute_roc_auc(pos, neg):
     pos = pos.detach().cpu().numpy()
     neg = neg.detach().cpu().numpy()
 
-    pos_dist = np.save("./results/masif_pos_dist.npy", pos)
-    neg_dist = np.save("./results/masif_neg_dist.npy", neg)
-
-
     labels = np.concatenate([np.ones((len(pos))), np.zeros((len(neg)))])
     dist_pairs = np.concatenate([pos, neg])
     return roc_auc_score(labels, dist_pairs)   
 
 # cache as training
 # all list
-test_list = [x.strip() for x in os.listdir("./peptide_data/processed")]
+# test_list = [x.strip() for x in os.listdir("./peptide_data/processed")]
 #generate_data_cache(args, './peptide_dataset/test', test_list)
 
 prepare = DataPrepare(args)
 
 test_set = prepare.dataset(data_type='test',
                             batch_size=args.batch_size,
-                            pair_shuffle=args.pair_shuffle)
+                            pair_shuffle=True)
+
+for data in test_set:
+    print(data[0][0])
+    break
+exit()    
 
 # essential part for training
-model = MaSIFSearch(args).to('cuda')
-model.load_state_dict(torch.load("experiments/masif_logp/12-21-16-35/model.pth"))
+model = MaSIFSearch(args).to(args.device)
+model.load_state_dict(torch.load("experiments/benchmark_ChemicalNet_dist/01-14-23-59/model.pth"))
+
 
 model.eval()
 with torch.no_grad():
