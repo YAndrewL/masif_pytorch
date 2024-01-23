@@ -239,10 +239,6 @@ class MaSIFSearch(nn.Module):
 
 
     def forward(self, batch):
-        # lyf tmp code here
-        self.atomtype_embedding_larger = nn.Embedding(10, 1)
-        
-        
         desc = []
         for tag, data in enumerate(batch):
             # lyf here flip the chemical net feature for binder, 1.11

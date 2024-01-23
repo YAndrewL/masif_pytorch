@@ -205,8 +205,6 @@ parser.add_argument("--n_features",
                     default=5,
                     help="Number of features")   
 
-
-# specifically for inferences
 parser.add_argument("--cache_model",
                     type=str,
                     default=None,
@@ -216,3 +214,16 @@ parser.add_argument("--mode",
                     default='train',
                     help="training or inference")   
 
+# very specifically for inference.py
+parser.add_argument("--inf_target_path",
+                    type=str,
+                    default=None,
+                    help="target feature (in .npy) path")
+parser.add_argument("--inf_binder_path",
+                    type=str,
+                    default=None,
+                    help="binder (candidates) feature (in .npy) path")
+parser.add_argument("--inf_save_path",
+                    type=str,
+                    default=None,
+                    help="save the desc for downstream analysis")

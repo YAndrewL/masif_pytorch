@@ -102,7 +102,7 @@ class Trainer(object):
             logger.info(f"Training AUC-ROC: {roc.item():.6f}")
 
 
-            if epoch == 0  or epoch % self.args.test_epochs == 0:
+            if epoch % self.args.test_epochs == 0:
                 logger.warning(f"Iteration reached, validate and test!")
                 
                 # validtion
@@ -148,8 +148,8 @@ class Trainer(object):
                     neg = torch.cat([d[1] for d in score])
 
                     roc = 1 - self.compute_roc_auc(pos, neg)
-                    logger.info(f"testing loss: {loss.item():.6f}")
-                    logger.info(f"testing AUC-ROC: {roc.item():.6f}")
+                    logger.info(f"Testing loss: {loss.item():.6f}")
+                    logger.info(f"Testing AUC-ROC: {roc.item():.6f}")
 
     def compute_roc_auc(self, pos, neg):
         pos = pos.detach().cpu().numpy()

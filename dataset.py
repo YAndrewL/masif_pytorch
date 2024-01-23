@@ -31,13 +31,9 @@ class SurfaceDataset(Dataset):
 
     def __getitem__(self, index):
         # shuffle list every time for positive and negative in training
-        if self.dataset_type == 'train' or self.dataset_type == 'val':
-            if self.pair_shuffle:
-                pidx = random.randint(0, self.data_len - 1)
-                nidx = random.randint(0, self.data_len - 1)
-            else:
-                pidx = index
-                nidx = index
+        if self.pair_shuffle:
+            pidx = random.randint(0, self.data_len - 1)
+            nidx = random.randint(0, self.data_len - 1)
         else:
             pidx = index
             nidx = index
